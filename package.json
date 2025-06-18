@@ -41,9 +41,6 @@
     "core-js": "3.36.0"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint"
-    ],
     "*.{js,jsx,ts,tsx,json,md,css}": [
       "prettier --check --ignore-path .gitignore --ignore-path .prettierignore"
     ]

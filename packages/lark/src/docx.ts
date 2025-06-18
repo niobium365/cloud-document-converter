@@ -989,6 +989,39 @@ export class Transformer {
 
         return this.normalizeImage(image)
       }
+      case BlockType.ISV: {
+        const snapshot: any = (block as any).snapshot ?? {}
+        const MERMAID_COMPONENT_ID = 'blk_631fefbbae02400430b8f9f4'
+        const isMermaid =
+          snapshot?.block_type === MERMAID_COMPONENT_ID ||
+          snapshot?.block_type_id === MERMAID_COMPONENT_ID ||
+          snapshot?.component_id === MERMAID_COMPONENT_ID ||
+          snapshot?.app_id === MERMAID_COMPONENT_ID ||
+          snapshot?.app_code_id === MERMAID_COMPONENT_ID
+
+        if (!isMermaid) return null
+
+        let mermaidCode: string | undefined
+
+        if (typeof snapshot.data === 'string') {
+          mermaidCode = snapshot.data
+        } else if (snapshot.data && typeof snapshot.data === 'object') {
+          if (typeof snapshot.data.data === 'string') {
+            mermaidCode = snapshot.data.data
+          }
+        }
+
+        if (typeof mermaidCode === 'string' && mermaidCode.trim()) {
+          const code: mdast.Code = {
+            type: 'code',
+            lang: 'mermaid',
+            value: trimEndEnter(mermaidCode),
+          }
+          return code
+        }
+
+        return null
+      }
       case BlockType.WHITEBOARD: {
         if (!this.options.whiteboard) return null
 
