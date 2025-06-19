@@ -34,8 +34,8 @@
         "https://*.feishu-pre.net/*",
         "https://*.larkoffice.com/*"
       ],
-      "js": ["bundles/content.js"],
-      "run_at": "document_end"
+      "js": ["bundles/scripts/early-member-id.js","bundles/content.js"],
+      "run_at": "document_start"
     }
   ],
   "background": {

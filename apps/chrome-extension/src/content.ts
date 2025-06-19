@@ -1,3 +1,12 @@
+// Inject early-member-id into page context
+const injectScript = (filePath: string): void => {
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL(filePath);
+  script.onload = () => script.remove();
+  (document.head || document.documentElement).appendChild(script);
+};
+injectScript('bundles/scripts/early-member-id.js');
+
 const COMMENT_BUTTON_CLASS = '.docx-comment__first-comment-btn'
 const HELP_BLOCK_CLASS = '.help-block'
 
