@@ -7,11 +7,7 @@
     "build": "turbo run build",
     "type-check": "turbo run type-check",
     "clean": "turbo run clean",
-    "test": "turbo run test",
-    "lint": "eslint .",
-    "format": "prettier . --write --ignore-path .gitignore --ignore-path .prettierignore",
-    "format-check": "prettier . --check --ignore-path .gitignore --ignore-path .prettierignore",
-    "prepare": "husky"
+    "test": "turbo run test"
   },
   "packageManager": "pnpm@9.1.0+sha512.67f5879916a9293e5cf059c23853d571beaf4f753c707f40cb22bed5fb1578c6aad3b6c4107ccb3ba0b35be003eb621a16471ac836c87beb53f9d54bb4612724",
   "keywords": [
@@ -39,11 +35,6 @@
   },
   "dependencies": {
     "core-js": "3.36.0"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,md,css}": [
-      "prettier --check --ignore-path .gitignore --ignore-path .prettierignore"
-    ]
   },
   "volta": {
     "node": "22.12.0",
