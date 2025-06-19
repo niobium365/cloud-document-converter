@@ -48,7 +48,7 @@ export default defineConfig([
     },
     plugins: [...createSharedPlugins({ runtime: 'extension' })],
   },
-  ...globSync(['src/scripts/*.ts','src/scripts/early-member-id.ts']).map(input => ({
+  ...globSync('src/scripts/*.ts').map(input => ({
     input,
     output: {
       dir: 'bundles/scripts',
