@@ -524,22 +524,44 @@ export const mergePhrasingContents = (
 
 export const transformOperationsToPhrasingContents = (
   ops: Operation[],
+  options: { preserveBreak?: boolean } = {},
 ): mdast.PhrasingContent[] => {
-  const operations = ops
-    .filter(operation => {
-      if (
-        isDefined(operation.attributes) &&
-        isDefined(operation.attributes.fixEnter)
-      ) {
-        return false
+  const { preserveBreak = false } = options;
+  const expandOpsIfBreak = (ops: Operation[]): Operation[] => {
+    if (!preserveBreak) return ops;
+    const result: Operation[] = [];
+    for (const op of ops) {
+      if (typeof op.insert === 'string' && op.insert.includes('\n')) {
+        const parts = op.insert.split('\n');
+        parts.forEach((part, idx) => {
+          if (part.length) {
+            result.push({ ...op, insert: part });
+          }
+          if (idx < parts.length - 1) {
+            result.push({ insert: '\n' } as Operation);
+          }
+        });
+      } else {
+        result.push(op);
       }
+    }
+    return result;
+  };
 
-      if (!isDefined(operation.attributes) && operation.insert === '\n') {
-        return false
-      }
+  const operations = expandOpsIfBreak(ops).filter(operation => {
+    if (
+      isDefined(operation.attributes) &&
+      isDefined(operation.attributes.fixEnter)
+    ) {
+      return false;
+    }
 
-      return true
-    })
+    if (!preserveBreak && !isDefined(operation.attributes) && operation.insert === '\n') {
+      return false;
+    }
+
+    return true;
+  })
     .map(op => {
       if (isDefined(op.attributes) && op.attributes['inline-component']) {
         try {
@@ -629,8 +651,13 @@ export const transformOperationsToPhrasingContents = (
 
   const createLiteral = (
     op: Operation,
-  ): mdast.Text | mdast.InlineCode | InlineMath => {
+  ): mdast.Text | mdast.InlineCode | InlineMath | mdast.Html => {
     const { attributes, insert } = op
+
+    if (insert === '\n') {
+      // Soft break preserved
+      return { type: 'html', value: '<br />' } as mdast.Html;
+    }
     const { inlineCode, equation } = attributes ?? {}
 
     if (inlineCode) {
@@ -654,7 +681,11 @@ export const transformOperationsToPhrasingContents = (
   }
 
   const nodes = indexToMarks.map((marks, index) => {
-    const op = operations[index]
+    if (operations[index].insert === '\n') {
+      // already handled as break literal above
+      return createLiteral(operations[index]);
+    }
+    const op = operations[index] as Operation;
 
     let node: mdast.PhrasingContent = createLiteral(op)
     for (const mark of marks) {
@@ -674,7 +705,7 @@ export const transformOperationsToPhrasingContents = (
     return node
   })
 
-  return mergePhrasingContents(nodes)
+  return mergePhrasingContents(nodes as mdast.PhrasingContent[])
 }
 
 const fetchImageSources = (imageBlock: ImageBlock) => {
@@ -873,6 +904,7 @@ export class Transformer {
           depth,
           children: transformOperationsToPhrasingContents(
             block.zoneState?.content.ops ?? [],
+            { preserveBreak: this.parent?.type === 'tableCell' },
           ),
         }
 
@@ -929,6 +961,7 @@ export class Transformer {
           type: 'paragraph',
           children: transformOperationsToPhrasingContents(
             block.zoneState?.content.ops ?? [],
+            { preserveBreak: this.parent?.type === 'tableCell' },
           ),
         }
         return this.transformParentBlock(
@@ -963,6 +996,7 @@ export class Transformer {
           type: 'paragraph',
           children: transformOperationsToPhrasingContents(
             block.zoneState?.content.ops ?? [],
+            { preserveBreak: this.parent?.type === 'tableCell' },
           ),
         }
         return paragraph
@@ -1095,7 +1129,7 @@ export class Transformer {
             const interleaved: mdast.PhrasingContent[] = []
             groups.forEach((group, index) => {
               if (index > 0) {
-                interleaved.push({ type: 'break' })
+                interleaved.push({ type: 'html', value: '<br />' })
               }
               interleaved.push(
                 ...group.filter(isPhrasingContent),
