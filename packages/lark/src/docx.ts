@@ -1087,11 +1087,23 @@ export class Transformer {
         return this.transformParentBlock(
           block,
           () => ({ type: 'tableCell', children: [] }),
-          nodes =>
-            nodes
-              .map(node => (node.type === 'paragraph' ? node.children : node))
-              .flat(1)
-              .filter(isPhrasingContent),
+          nodes => {
+            const groups = nodes.map(node =>
+              node.type === 'paragraph' ? node.children : [node],
+            ) as mdast.PhrasingContent[][]
+
+            const interleaved: mdast.PhrasingContent[] = []
+            groups.forEach((group, index) => {
+              if (index > 0) {
+                interleaved.push({ type: 'break' })
+              }
+              interleaved.push(
+                ...group.filter(isPhrasingContent),
+              )
+            })
+
+            return interleaved
+          }
         )
       }
       case BlockType.VIEW: {
