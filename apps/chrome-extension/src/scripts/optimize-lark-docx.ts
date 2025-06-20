@@ -146,7 +146,7 @@ const optimize = async () => {
   const body = {
     member_id: String(memberId),
     uuid: crypto.randomUUID(),
-    page_id: docToken,
+    page_id: root.block_id,
     change_map: changeMap,
   }
 
