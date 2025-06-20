@@ -7,7 +7,7 @@
  *
  * This is a best-effort client-side alternative to the slow Python script.
  */
-import { Toast, docx } from '@dolphin/lark'
+import { Toast } from '@dolphin/lark'
 
 const MERMAID_ADDON_ID = 'blk_631fefbbae02400430b8f9f4'
 
@@ -32,11 +32,19 @@ const optimize = async () => {
     return
   }
 
+  // Determine page block ID (from record)
+  const pageBlockId = root.record?.id as string;
+  if (!pageBlockId) {
+    Toast.warning({ content: 'Cannot determine page block ID' });
+    return;
+  }
+  // `struct.version` holds the current page version
+  const pageBlockVersion = (root as any).struct?.version ?? 0;
+
   interface BlockModel {
-    block_id: string
+    record?: { id: string }
     type: string
     snapshot: any
-    parent_id?: string
     children: BlockModel[]
   }
 
@@ -74,28 +82,34 @@ const optimize = async () => {
   const pageOps: any[] = []
   const changeMap: Record<string, ChangePayload> = {}
 
-  // helper to generate 22-char id (base62 from uuid)
-  const generateId = () => crypto.randomUUID().replace(/-/g, '').slice(0, 22)
+  // helper to generate 27-character base62 block ID
+  const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const generateId = (): string =>
+    Array.from({ length: 27 })  // block IDs are 27-char base62
+      .map(() => ALPHABET[Math.floor(Math.random() * ALPHABET.length)])
+      .join('');
 
   // map children index
   const parentMap = new Map<string, BlockModel>()
   const collectParents = (node: BlockModel) => {
     for (const child of node.children ?? []) {
-      parentMap.set(child.block_id, node)
+      parentMap.set(child.record?.id || '', node)  // map child.record.id to parent
       collectParents(child)
     }
   }
   collectParents(root as any)
 
   for (const blk of mermaidBlocks) {
-    const parent = parentMap.get(blk.block_id) as BlockModel | undefined
-    if (!parent) continue
+    const blkId = blk.record?.id || '';  // block ID from record.id
+    if (!blkId) continue;
+    const parent = parentMap.get(blkId) as BlockModel | undefined;
+    if (!blkId || !parent) continue
 
-    const idx = parent.children.findIndex(c => c.block_id === blk.block_id)
+    const idx = parent.children.findIndex(c => c.record?.id === blkId)
     if (idx === -1) continue
 
     // op to delete old id
-    pageOps.push({ p: ['children', idx], action: { ld: blk.block_id } })
+    pageOps.push({ p: ['children', idx], action: { ld: blkId } }) // delete old block
 
     const newId = generateId()
     // op to insert new id
@@ -108,7 +122,7 @@ const optimize = async () => {
     const oiObject = {
       type: 'isv',
       children: [],
-      parent_id: root.block_id,
+      parent_id: pageBlockId,
       add_ons: {
         component_id: '',
         component_type_id: MERMAID_ADDON_ID,
@@ -124,9 +138,9 @@ const optimize = async () => {
   }
 
   // page block entry
-  changeMap[root.block_id] = {
-    id: root.block_id,
-    version: root.version ?? 0,
+  changeMap[pageBlockId] = {
+    id: pageBlockId,
+    version: pageBlockVersion,
     payload: { ops: pageOps },
   }
 
@@ -146,7 +160,7 @@ const optimize = async () => {
   const body = {
     member_id: String(memberId),
     uuid: crypto.randomUUID(),
-    page_id: root.block_id,
+    page_id: pageBlockId,
     change_map: changeMap,
   }
 
@@ -217,10 +231,9 @@ const optimize = async () => {
       console.warn('Non-JSON response from user_change', e)
       json = {}
     }
-    if (resp.ok && json?.data?.code === 0) {
+    if (resp.ok && json?.code === 0) {
       Toast.success({ content: 'Mermaid blocks converted!' })
-      // refresh local editor to show addon – easiest is reload.
-      location.reload()
+
     } else {
       Toast.warning({ content: `API error: ${json?.msg ?? json?.message ?? resp.status}` })
     }
