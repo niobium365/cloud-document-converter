@@ -51,6 +51,12 @@ const POC_PAYLOAD = {
   },
 };
 
+const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const generateId = (): string =>
+  Array.from({ length: 27 })  // Block IDs are 27-char base62
+    .map(() => ALPHABET[Math.floor(Math.random() * ALPHABET.length)])
+    .join('');
+
 (async function runPoc() {
   const csrf = localStorage.getItem('cdc_csrf_token');
   if (!csrf) {
@@ -58,48 +64,37 @@ const POC_PAYLOAD = {
     return;
   }
   try {
-    const resp = await fetch('/space/api/docx/blocks/user_change', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json;charset=UTF-8',
-        'x-csrftoken': csrf,
-      },
-      credentials: 'include',
-      body: JSON.stringify({ ...POC_PAYLOAD, uuid: crypto.randomUUID() }),
-    });
+    // Build dynamic payload to avoid replay
+      const originalMap = JSON.parse(JSON.stringify(POC_PAYLOAD.change_map));
+      const staticNewId = Object.keys(originalMap).find(id => id !== POC_PAYLOAD.page_id)!;
+      const newBlockId = generateId();
+      originalMap[newBlockId] = { ...originalMap[staticNewId], id: newBlockId };
+      delete originalMap[staticNewId];
+      // Update page ops to use newBlockId
+      const pageEntry = originalMap[POC_PAYLOAD.page_id];
+      pageEntry.payload.ops = pageEntry.payload.ops.map((op: any) =>
+        op.action.li ? { ...op, action: { ...op.action, li: newBlockId } } : op
+      );
+      const requestUuid = crypto.randomUUID();
+      const body = {
+        member_id: POC_PAYLOAD.member_id,
+        uuid: requestUuid,
+        page_id: POC_PAYLOAD.page_id,
+        change_map: originalMap,
+      };
+      const resp = await fetch('/space/api/docx/blocks/user_change', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8',
+          'x-csrftoken': csrf,
+        },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      });
     const json = await resp.json().catch(() => ({}));
     console.log('POC result →', resp.status, json);
-    if (resp.ok && json.data?.code === 0) {
+    if (resp.ok && json.code === 0) {
       Toast.success({ content: 'POC conversion succeeded!' });
-      // Refresh in-editor view via doc_highlight
-        try {
-          await fetch('/baike/v2/api/doc_highlight', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json;charset=UTF-8',
-              'x-csrftoken': csrf,
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-              doc_id: POC_PAYLOAD.page_id,
-              doc_type: 'docx',
-              blocks: [
-                {
-                  text: '',
-                  id: POC_PAYLOAD.page_id,
-                  version: String(json.data.block_map[POC_PAYLOAD.page_id].version),
-                },
-              ],
-              include_mine_words: false,
-              is_editing: true,
-              obj_id: '7517567469006028828',
-              is_editable: true,
-            }),
-          })
-        } catch (e) {
-          console.warn('doc_highlight error', e)
-        }
-        location.reload();
     } else {
       Toast.warning({ content: `POC error: ${json.msg || json.data?.detail || resp.status}` });
     }
