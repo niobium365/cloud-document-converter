@@ -39,7 +39,7 @@ const optimize = async () => {
     return;
   }
   // Determine page block version
-  const pageBlockVersion = (root as any).struct?.version ?? 0
+  const pageBlockVersion = (root as any).struct?.version ?? 25
 
   // Get member id (for author)
   const getStoredMemberId = (): string | undefined =>
@@ -126,7 +126,7 @@ const optimize = async () => {
       children: [],
       comments: [],
       revisions: [],
-      author: '6955273262934802433',
+      author: root.record.snapshot.author,
       data: { data: mermaidCode, theme: 'default', view: 'chart' },
       parent_id: pageBlockId,
       
