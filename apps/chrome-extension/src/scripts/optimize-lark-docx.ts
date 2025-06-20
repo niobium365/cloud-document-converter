@@ -57,26 +57,28 @@ const optimize = async () => {
     children: BlockModel[]
   }
 
-  const mermaidBlocks: BlockModel[] = []
+  // Scan only direct page children for Mermaid code blocks
+  const pageChildren: BlockModel[] = (root as any).children as BlockModel[];
+  const mermaidBlocks: BlockModel[] = pageChildren.filter((node: BlockModel) => {
+    if (node.type !== 'code') return false;
+    const code: string =
+      node.snapshot?.zoneState?.allText ??
+      node.snapshot?.text?.initialAttributedTexts?.text?.[0] ?? '';
+    const lang = (node.snapshot?.language ?? '').toLowerCase();
+    const mermaidPlainRegex = /^\s*(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|mindmap|timeline|quadrantChart|gitGraph|requirementDiagram|c4context|c4container|c4component|c4dynamic|c4deployment)\b/i;
+    const isMermaid =
+      lang === 'mermaid' ||
+      /^```?\s*mermaid/.test(code) ||
+      mermaidPlainRegex.test(code);
+    return isMermaid;
+  });
 
-  const walk = (node: BlockModel) => {
-    if (node.type === 'code') {
-      const code: string =
-        node.snapshot?.zoneState?.allText ??
-        node.snapshot?.text?.initialAttributedTexts?.text?.[0] ?? ''
-      const lang = (node.snapshot?.language ?? '').toLowerCase()
-      const mermaidPlainRegex = /^(\s*)(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|mindmap|timeline|quadrantChart|gitGraph|requirementDiagram|c4context|c4container|c4component|c4dynamic|c4deployment)\b/i
-      const isMermaid =
-        lang === 'mermaid' ||
-        /^```?\s*mermaid/.test(code) ||
-        mermaidPlainRegex.test(code)
-      if (isMermaid) {
-        mermaidBlocks.push(node)
-      }
-    }
-    for (const child of node.children ?? []) walk(child)
+  if (!mermaidBlocks.length) {
+    Toast.warning({ content: 'No Mermaid blocks found.' });
+    return;
   }
-  walk(root)
+
+  Toast.info({ content: `Converting ${mermaidBlocks.length} Mermaid block(s)...` });
 
   if (!mermaidBlocks.length) {
     Toast.warning({ content: 'No Mermaid blocks found.' })
@@ -98,23 +100,14 @@ const optimize = async () => {
       .map(() => ALPHABET[Math.floor(Math.random() * ALPHABET.length)])
       .join('');
 
-  // map children index
-  const parentMap = new Map<string, BlockModel>()
-  const collectParents = (node: BlockModel) => {
-    for (const child of node.children ?? []) {
-      parentMap.set(child.record?.id || '', node)  // map child.record.id to parent
-      collectParents(child)
-    }
-  }
-  collectParents(root as any)
+  
 
-  for (const blk of mermaidBlocks) {
+  console.log('Page children:', pageChildren.map(c => ({ id: c.record?.id, type: c.type }))); console.log('Mermaid blocks:', mermaidBlocks.map(b => ({ id: b.record?.id }))); for (const blk of mermaidBlocks) {
+    
     const blkId = blk.record?.id || '';  // block ID from record.id
     if (!blkId) continue;
-    const parent = parentMap.get(blkId) as BlockModel | undefined;
-    if (!blkId || !parent) continue
-
-    const idx = parent.children.findIndex(c => c.record?.id === blkId)
+    const idx = pageChildren.findIndex(c => c.record?.id === blkId)
+    if (idx === -1) continue
     if (idx === -1) continue
 
     // op to delete old id
@@ -133,14 +126,17 @@ const optimize = async () => {
       children: [],
       comments: [],
       revisions: [],
-      author: memberId,
+      author: '6955273262934802433',
       data: { data: mermaidCode, theme: 'default', view: 'chart' },
       parent_id: pageBlockId,
+      
+      
       
       
       app_block_id: '',
       block_type_id: MERMAID_ADDON_ID,
       manifest: { view_type: 'block_h5', app_version: '0.0.100' },
+      
       
       comment_details: {},
     }
