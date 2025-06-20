@@ -135,56 +135,8 @@ const optimize = async () => {
     return localStorage.getItem('cdc_early_member_id') ?? undefined
   }
 
-  /**
-   * Discover member ID from cookie, global bootstrap JSON, or last-chance globals.
-   */
-  const discoverMemberId = (): string | undefined => {
-    // 1. cookie
-    const c = document.cookie.match(/(?:^|;\s)(?:c_uid_v2|c_uid|uid)=([^;]+)/)
-    if (c) return decodeURIComponent(c[1])
-  
-    // 2. global bootstrap JSON
-    const m = document.documentElement.innerHTML.match(/"member_id":"(\d+)"/)
-    if (m) return m[1]
-  
-    // 3. last-chance globals (rarely missing)
-    return (window as any).__docsUser?.member_id ??
-           (window as any).__USER_CONFIG__?.member_id ??
-           undefined
-  }
-
-  // fall back to network sniffer if cookie/bootstrap not found
-  const waitForMemberId = (): Promise<string> =>
-    new Promise(resolve => {
-      const orig = window.fetch
-      window.fetch = async (...args) => {
-        const [input, init] = args
-        if (typeof input === 'string' && input.includes('/blocks/user_change')) {
-          try {
-            const body = init?.body
-            if (typeof body === 'string') {
-              const parsed = JSON.parse(body)
-              if (parsed.member_id) {
-                window.fetch = orig // restore
-                resolve(String(parsed.member_id))
-              }
-            }
-          } catch {}
-        }
-        return orig(...(args as Parameters<typeof fetch>))
-      }
-    })
-
     
-    let memberId = (await getStoredMemberId()) ?? localStorage.getItem('cdc_early_member_id') ?? discoverMemberId()
-
-    if (!memberId) {
-      Toast.info({ content: 'Determining member_id…' })
-      memberId = await Promise.race([
-        waitForMemberId(),
-        new Promise<string | undefined>(res => setTimeout(() => res(undefined), 3000)),
-      ])
-    }
+    let memberId = (await getStoredMemberId()) ?? localStorage.getItem('cdc_early_member_id')
 
     if (!memberId) {
       Toast.warning({ content: 'Cannot determine member_id; abort.' })
@@ -221,12 +173,8 @@ const optimize = async () => {
       return undefined
     })()
 
-    const getCsrfToken = () => {
-      const m = document.cookie.match(/(?:^|;\s)csrf_token=([^;]+)/)
-      return m ? decodeURIComponent(m[1]) : undefined
-    }
-
-    const csrf = getCsrfToken()
+    // CSRF token mirrored from background into page localStorage
+    const csrf = localStorage.getItem('cdc_csrf_token') ?? undefined
 
     const paths: string[] = [
       '/space/api/docx/blocks/user_change',

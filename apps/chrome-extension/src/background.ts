@@ -47,6 +47,26 @@ chrome.webRequest.onBeforeRequest.addListener(
   ["requestBody"],
 )
 
+// Capture CSRF token from outgoing requests
+chrome.webRequest.onBeforeSendHeaders.addListener(
+  details => {
+    try {
+      for (const h of details.requestHeaders || []) {
+        if (h.name.toLowerCase() === 'x-csrftoken') {
+          chrome.storage.local.set({ csrfToken: h.value });
+          console.log('Captured csrfToken:', h.value);
+          break;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    return undefined;
+  },
+  { urls: ["*://*/space/api/docx/blocks/user_change*", "*://*/space/api/docx/*batch_update*"] },
+  ["requestHeaders"]
+);
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: MenuItemId.DOWNLOAD_DOCX_AS_MARKDOWN,
@@ -109,16 +129,16 @@ const executeScriptByFlag = async (flag: string | number, tabId: number) => {
       // the optimize script (running in MAIN world) can access it without chrome APIs.
       await chrome.scripting.executeScript({
         func: () => {
-          chrome.storage?.local.get('earlyMemberId', (res: { [k: string]: string }) => {
-            const mid = res?.['earlyMemberId']
+          chrome.storage.local.get(['earlyMemberId','csrfToken'], (res: any) => {
+            const mid = res.earlyMemberId;
             if (mid) {
-              try {
-                window.localStorage.setItem('cdc_early_member_id', String(mid))
-              } catch {
-                /* ignore quota */
-              }
+              try { window.localStorage.setItem('cdc_early_member_id', String(mid)); } catch {}
             }
-          })
+            const csrf = res.csrfToken;
+            if (csrf) {
+              try { window.localStorage.setItem('cdc_csrf_token', String(csrf)); } catch {}
+            }
+          });
         },
         target: { tabId },
       })
