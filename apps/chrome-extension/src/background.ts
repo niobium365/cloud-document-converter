@@ -3,7 +3,49 @@ import { type Message } from './common/message'
 enum MenuItemId {
   DOWNLOAD_DOCX_AS_MARKDOWN = 'download_docx_as_markdown',
   COPY_DOCX_AS_MARKDOWN = 'copy_docx_as_markdown',
+  OPTIMIZE_DOCX = 'optimize_docx',
 }
+
+// Capture member_id from early network traffic (user_change / room/watch)
+chrome.webRequest.onBeforeRequest.addListener(
+  details => {
+    try {
+      const url = new URL(details.url)
+      // /space/api/room/watch?member_id=...
+      const mid = url.pathname.includes('/space/api/room/watch')
+        ? url.searchParams.get('member_id')
+        : undefined
+      if (mid) {
+        chrome.storage.local.set({ earlyMemberId: mid })
+        return
+      }
+      // /blocks/user_change POST body contains JSON with member_id
+      if (
+        url.pathname.includes('/blocks/user_change') &&
+        details.requestBody?.raw?.length
+      ) {
+        const bytes = details.requestBody.raw[0].bytes
+        if (bytes) {
+          const bodyStr = new TextDecoder().decode(bytes)
+          const parsed = JSON.parse(bodyStr)
+          if (parsed?.member_id) {
+            chrome.storage.local.set({ earlyMemberId: String(parsed.member_id) })
+          }
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    return undefined
+  },
+  {
+    urls: [
+      "*://*/blocks/user_change*",
+      "*://*/space/api/room/watch*",
+    ],
+  },
+  ["requestBody"],
+)
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -31,6 +73,19 @@ chrome.runtime.onInstalled.addListener(() => {
     ],
     contexts: ['page', 'editable'],
   })
+
+  chrome.contextMenus.create({
+    id: MenuItemId.OPTIMIZE_DOCX,
+    title: chrome.i18n.getMessage('optimize_docx'),
+    documentUrlPatterns: [
+      'https://*.feishu.cn/*',
+      'https://*.feishu.net/*',
+      'https://*.larksuite.com/*',
+      'https://*.feishu-pre.net/*',
+      'https://*.larkoffice.com/*',
+    ],
+    contexts: ['page', 'editable'],
+  })
 })
 
 const executeScriptByFlag = async (flag: string | number, tabId: number) => {
@@ -45,6 +100,30 @@ const executeScriptByFlag = async (flag: string | number, tabId: number) => {
     case MenuItemId.COPY_DOCX_AS_MARKDOWN:
       await chrome.scripting.executeScript({
         files: ['bundles/scripts/copy-lark-docx-as-markdown.js'],
+        target: { tabId },
+        world: 'MAIN',
+      })
+      break
+    case MenuItemId.OPTIMIZE_DOCX:
+      // First, mirror captured memberId from extension storage into page localStorage so
+      // the optimize script (running in MAIN world) can access it without chrome APIs.
+      await chrome.scripting.executeScript({
+        func: () => {
+          chrome.storage?.local.get('earlyMemberId', (res: { [k: string]: string }) => {
+            const mid = res?.['earlyMemberId']
+            if (mid) {
+              try {
+                window.localStorage.setItem('cdc_early_member_id', String(mid))
+              } catch {
+                /* ignore quota */
+              }
+            }
+          })
+        },
+        target: { tabId },
+      })
+      await chrome.scripting.executeScript({
+        files: ['bundles/scripts/optimize-lark-docx.js'],
         target: { tabId },
         world: 'MAIN',
       })

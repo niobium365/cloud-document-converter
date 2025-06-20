@@ -5,6 +5,9 @@
   "copy_docx_as_markdown": {
     "message": "Copy as Markdown"
   },
+  "optimize_docx": {
+    "message": "Optimize Markdown"
+  },
   "help_and_feedback": {
     "message": "Help and Feedback"
   }
