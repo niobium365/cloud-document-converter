@@ -38,8 +38,17 @@ const optimize = async () => {
     Toast.warning({ content: 'Cannot determine page block ID' });
     return;
   }
-  // `struct.version` holds the current page version
-  const pageBlockVersion = (root as any).struct?.version ?? 0;
+  // Determine page block version
+  const pageBlockVersion = (root as any).struct?.version ?? 0
+
+  // Get member id (for author)
+  const getStoredMemberId = (): string | undefined =>
+    localStorage.getItem('cdc_early_member_id') ?? undefined
+  const memberId = (await getStoredMemberId()) ?? localStorage.getItem('cdc_early_member_id')
+  if (!memberId) {
+    Toast.warning({ content: 'Cannot determine member_id; abort.' })
+    return
+  }
 
   interface BlockModel {
     record?: { id: string }
@@ -122,12 +131,18 @@ const optimize = async () => {
     const oiObject = {
       type: 'isv',
       children: [],
+      comments: [],
+      revisions: [],
+      author: memberId,
+      data: { data: mermaidCode, theme: 'default', view: 'chart' },
       parent_id: pageBlockId,
-      add_ons: {
-        component_id: '',
-        component_type_id: MERMAID_ADDON_ID,
-        record: { data: mermaidCode, theme: 'default', view: 'chart' },
-      },
+      
+      
+      app_block_id: '',
+      block_type_id: MERMAID_ADDON_ID,
+      manifest: { view_type: 'block_h5', app_version: '0.0.100' },
+      
+      comment_details: {},
     }
 
     changeMap[newId] = {
@@ -144,18 +159,7 @@ const optimize = async () => {
     payload: { ops: pageOps },
   }
 
-  // Get member id that background worker mirrored into localStorage
-  const getStoredMemberId = (): string | undefined => {
-    return localStorage.getItem('cdc_early_member_id') ?? undefined
-  }
 
-    
-    let memberId = (await getStoredMemberId()) ?? localStorage.getItem('cdc_early_member_id')
-
-    if (!memberId) {
-      Toast.warning({ content: 'Cannot determine member_id; abort.' })
-      return
-    }
 
   const body = {
     member_id: String(memberId),
