@@ -39,7 +39,7 @@ const optimize = async () => {
     return;
   }
   // Determine page block version
-  const pageBlockVersion = (root as any).struct?.version ?? 25
+  const pageBlockVersion = (root as any).struct?.version ?? root.initialVersion
 
   // Get member id (for author)
   const getStoredMemberId = (): string | undefined =>
