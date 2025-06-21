@@ -81,26 +81,45 @@ const optimize = async () => {
       mermaidPlainRegex.test(code);
     return isMermaid;
   });
+  console.log(`[Optimize] Found ${mermaidBlocks.length} Mermaid block(s):`, mermaidBlocks.map(b => b.record?.id));
+  const tableBlocks: BlockModel[] = pageChildren.filter((n: BlockModel) => {
+    if (n.type !== 'table') return false;
+    const props = (n.snapshot as any)?.payload?.properties ?? {};
+    return !props.header_row || !props.header_column;
+  });
+  console.log(`[Optimize] Found ${tableBlocks.length} table block(s) needing header update:`, tableBlocks.map(b => b.record?.id));
 
-  if (!mermaidBlocks.length) {
-    Toast.warning({ content: 'No Mermaid blocks found.' });
+  if (!mermaidBlocks.length && !tableBlocks.length) {
+    Toast.warning({ content: 'No optimizations needed for Mermaid or table headers.' });
     return;
   }
-
-  Toast.info({ content: `Converting ${mermaidBlocks.length} Mermaid block(s)...` });
-
-  if (!mermaidBlocks.length) {
-    Toast.warning({ content: 'No Mermaid blocks found.' })
-    return
-  }
-
-  Toast.info({ content: `Converting ${mermaidBlocks.length} Mermaid block(s)...` })
+  const summaryTasks: string[] = [];
+  if (mermaidBlocks.length) summaryTasks.push(`${mermaidBlocks.length} Mermaid block(s)`);
+  if (tableBlocks.length) summaryTasks.push(`${tableBlocks.length} table header(s)`);
+  Toast.info({ content: `Optimizing ${summaryTasks.join(' and ')}...` });
 
   // Build change_map for /blocks/user_change endpoint
   interface ChangePayload { id: string; version: number; payload: { ops: any[] } }
 
   const pageOps: any[] = []
   const changeMap: Record<string, ChangePayload> = {}
+
+  // Apply table header updates using hoisted tableBlocks
+  if (tableBlocks.length) {
+    for (const tbl of tableBlocks) {
+      const tblId = tbl.record?.id as string
+      if (!tblId) continue
+      const tblVer = (tbl as any).struct?.version ?? 0
+      changeMap[tblId] = {
+        id: tblId,
+        version: tblVer,
+        payload: { ops: [
+          { p: ['header_row'], action: { oi: true } },
+          { p: ['header_column'], action: { oi: true } },
+        ] }
+      }
+    }
+  }
 
   // helper to generate 27-character base62 block ID
   const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
