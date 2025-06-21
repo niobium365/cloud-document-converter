@@ -31,6 +31,9 @@ chrome.webRequest.onBeforeRequest.addListener(
           if (parsed?.member_id) {
             chrome.storage.local.set({ earlyMemberId: String(parsed.member_id) })
           }
+          // Capture full user_change request payload for debugging
+          //chrome.storage.local.set({ lastUserChangeParsed: parsed })
+          //console.log('Captured full /blocks/user_change payload:', parsed)
         }
       }
     } catch {
@@ -46,6 +49,55 @@ chrome.webRequest.onBeforeRequest.addListener(
   },
   ["requestBody"],
 )
+
+// Pending page block version tracking
+interface PendingVersion { pageId: string; version: number; }
+const pendingVersions: Record<string, PendingVersion> = {};
+
+// Capture page block version from outgoing /blocks/user_change requests
+chrome.webRequest.onBeforeRequest.addListener(
+  details => {
+    try {
+      const url = new URL(details.url);
+      if (
+        url.pathname.includes('/blocks/user_change') &&
+        details.requestBody?.raw?.length
+      ) {
+        const bytes = details.requestBody.raw[0].bytes;
+        if (bytes) {
+          const bodyStr = new TextDecoder().decode(bytes);
+          const parsed = JSON.parse(bodyStr);
+          const pageId: string = parsed.page_id;
+          const pageEntry = parsed.change_map?.[pageId];
+          if (pageId && pageEntry?.version != null) {
+            pendingVersions[details.requestId] = { pageId, version: pageEntry.version };
+          }
+        }
+      }
+    } catch {}
+    return undefined;
+  },
+  { urls: ["*://*/blocks/user_change*", "*://*/space/api/docx/blocks/user_change*", "*://*/space/api/docx/*batch_update*"] },
+  ["requestBody"]
+);
+
+// On response, cache new page block version
+console.log('[CDC] Background onCompleted listener added');
+chrome.webRequest.onCompleted.addListener(
+  details => {
+    console.log('[CDC] user_change completed', details.requestId, details.statusCode);
+    try {
+      const pending = pendingVersions[details.requestId];
+      if (pending && details.statusCode === 200) {
+        console.log('[CDC] caching new version', pending.pageId, pending.version + 1);
+        const newVer = pending.version + 1;
+        chrome.storage.local.set({ [`cdc_page_version_${pending.pageId}`]: newVer });
+      }
+    } catch {}
+    delete pendingVersions[details.requestId];
+  },
+  { urls: ["*://*/blocks/user_change*", "*://*/space/api/docx/blocks/user_change*", "*://*/space/api/docx/*batch_update*"] }
+);
 
 // Capture CSRF token from outgoing requests
 chrome.webRequest.onBeforeSendHeaders.addListener(

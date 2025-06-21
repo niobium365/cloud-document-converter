@@ -38,8 +38,17 @@ const optimize = async () => {
     Toast.warning({ content: 'Cannot determine page block ID' });
     return;
   }
-  // Determine page block version
-  const pageBlockVersion = (root as any).struct?.version ?? root.initialVersion
+  // Determine page block version (per-doc or generic cache, fallback to struct/initial)
+  const versionKey = `cdc_page_version_${docToken}`;
+  const perDocStr = localStorage.getItem(versionKey);
+  const perDocVer = perDocStr !== null ? Number(perDocStr) : NaN;
+  const genericStr = localStorage.getItem('cdc_page_version');
+  const genericVer = genericStr !== null ? Number(genericStr) : NaN;
+  const pageBlockVersion = Number.isFinite(perDocVer) && perDocVer > 0
+    ? perDocVer
+    : Number.isFinite(genericVer) && genericVer > 0
+    ? genericVer
+    : (root as any).struct?.version ?? root.initialVersion ?? 0;
 
   // Get member id (for author)
   const getStoredMemberId = (): string | undefined =>

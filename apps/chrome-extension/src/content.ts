@@ -1,7 +1,20 @@
 const COMMENT_BUTTON_CLASS = '.docx-comment__first-comment-btn'
 const HELP_BLOCK_CLASS = '.help-block'
 
+console.log('[CDC] content script loaded');
 let disposables: (() => void)[] = []
+
+// Mirror any cdc_page_version_* keys from chrome.storage into window.localStorage
+console.log('[CDC] storage.onChanged listener registered');
+chrome.storage.onChanged.addListener((changes, area) => {
+  console.log('[CDC] storage.onChanged', changes, area);
+  if (area !== 'local') return;
+  for (const key of Object.keys(changes)) {
+    if (!key.startsWith('cdc_page_version')) continue;
+    const nv = changes[key].newValue;
+    try { window.localStorage.setItem(key, String(nv)); } catch {}
+  }
+});
 
 const dispose = (): void => {
   disposables.forEach(disposable => {
