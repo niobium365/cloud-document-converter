@@ -80,13 +80,13 @@ const optimize = async () => {
       /^```?\s*mermaid/.test(code) ||
       mermaidPlainRegex.test(code);
     return isMermaid;
-  });
+  }).slice(0, 10);
   console.log(`[Optimize] Found ${mermaidBlocks.length} Mermaid block(s):`, mermaidBlocks.map(b => b.record?.id));
   const tableBlocks: BlockModel[] = pageChildren.filter((n: BlockModel) => {
     if (n.type !== 'table') return false;
     const snapshot = n.struct?.record?.snapshot as any;
     return !snapshot?.header_row || !snapshot?.header_column;
-  });
+  }).slice(0, 20);
   console.log(`[Optimize] Found ${tableBlocks.length} table block(s) needing header update:`, tableBlocks.map(b => b.record?.id));
 
   if (!mermaidBlocks.length && !tableBlocks.length) {
