@@ -47,8 +47,8 @@ const optimize = async () => {
   const pageBlockVersion = Number.isFinite(perDocVer) && perDocVer > 0
     ? perDocVer
     : Number.isFinite(genericVer) && genericVer > 0
-    ? genericVer
-    : (root as any).struct?.version ?? root.initialVersion ?? 0;
+      ? genericVer
+      : (root as any).struct?.version ?? root.initialVersion ?? 0;
 
   // Get member id (for author)
   const getStoredMemberId = (): string | undefined =>
@@ -66,22 +66,29 @@ const optimize = async () => {
     children: BlockModel[]
   }
 
-  // Scan only direct page children for Mermaid code blocks
+  // Find nested Mermaid plaintext blocks, all level code blocks
   const pageChildren: BlockModel[] = (root as any).children as BlockModel[];
-  const mermaidBlocks: BlockModel[] = pageChildren.filter((node: BlockModel) => {
-    if (node.type !== 'code') return false;
-    const code: string =
-      node.snapshot?.zoneState?.allText ??
-      node.snapshot?.text?.initialAttributedTexts?.text?.[0] ?? '';
-    const lang = (node.snapshot?.language ?? '').toLowerCase();
-    const mermaidPlainRegex = /^\s*(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|mindmap|timeline|quadrantChart|gitGraph|requirementDiagram|c4context|c4container|c4component|c4dynamic|c4deployment)\b/i;
-    const isMermaid =
-      lang === 'mermaid' ||
-      /^```?\s*mermaid/.test(code) ||
-      mermaidPlainRegex.test(code);
-    return isMermaid;
-  }).slice(0, 10);
-  console.log(`[Optimize] Found ${mermaidBlocks.length} Mermaid block(s):`, mermaidBlocks.map(b => b.record?.id));
+  const nestedMermaidBlocks: BlockModel[] = [];
+  const scanDescendants = (nodes: BlockModel[]) => {
+    for (const n of nodes) {
+      if (n.type === 'code') {
+        const code: string =
+          n.snapshot?.zoneState?.allText ??
+          n.snapshot?.text?.initialAttributedTexts?.text?.[0] ?? '';
+        const lang = (n.snapshot?.language ?? '').toLowerCase();
+        const mermaidPlainRegex = /^\s*(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|mindmap|timeline|quadrantChart|gitGraph|requirementDiagram|c4context|c4container|c4component|c4dynamic|c4deployment)\b/i;
+        const isMermaid =
+          lang === 'mermaid' ||
+          /^```?\s*mermaid/.test(code) ||
+          mermaidPlainRegex.test(code);
+        if (isMermaid) nestedMermaidBlocks.push(n);
+      }
+      if (n.children.length) scanDescendants(n.children);
+    }
+  };
+  scanDescendants([root]);
+  const mermaidBlocks = nestedMermaidBlocks.slice(0, 10);
+  window.console.log(`[Optimize] Found ${mermaidBlocks.length} nested Mermaid block(s):`, mermaidBlocks.map(b => b.record?.id));
   const tableBlocks: BlockModel[] = pageChildren.filter((n: BlockModel) => {
     if (n.type !== 'table') return false;
     const snapshot = n.struct?.record?.snapshot as any;
@@ -101,8 +108,18 @@ const optimize = async () => {
   // Build change_map for /blocks/user_change endpoint
   interface ChangePayload { id: string; version: number; payload: { ops: any[] } }
 
-  const pageOps: any[] = []
-  const changeMap: Record<string, ChangePayload> = {}
+  // parentOps removed (multi-level parent ops managed directly in changeMap)
+  const changeMap: Record<string, ChangePayload> = {};
+
+  // helper to locate block model by ID recursively
+  const findBlockById = (id: string, nodes: BlockModel[]): BlockModel | undefined => {
+    for (const n of nodes) {
+      if (n.record?.id === id) return n;
+      const found = findBlockById(id, n.children);
+      if (found) return found;
+    }
+    return undefined;
+  }; // usage: findBlockById(parentId, [root as BlockModel])
 
   // Apply table header updates using hoisted tableBlocks
   if (tableBlocks.length) {
@@ -113,10 +130,12 @@ const optimize = async () => {
       changeMap[tblId] = {
         id: tblId,
         version: tblVer,
-        payload: { ops: [
-          { p: ['header_row'], action: { oi: true } },
-          { p: ['header_column'], action: { oi: true } },
-        ] }
+        payload: {
+          ops: [
+            { p: ['header_row'], action: { oi: true } },
+            { p: ['header_column'], action: { oi: true } },
+          ]
+        }
       }
     }
   }
@@ -128,22 +147,30 @@ const optimize = async () => {
       .map(() => ALPHABET[Math.floor(Math.random() * ALPHABET.length)])
       .join('');
 
-  
 
-  console.log('Page children:', pageChildren.map(c => ({ id: c.record?.id, type: c.type }))); console.log('Mermaid blocks:', mermaidBlocks.map(b => ({ id: b.record?.id }))); for (const blk of mermaidBlocks) {
-    
+
+  console.log('Page children:', pageChildren.map(c => ({ id: c.record?.id, type: c.type })));
+  console.log('Mermaid blocks:', mermaidBlocks.map(b => ({ id: b.record?.id })));
+  for (const blk of mermaidBlocks) {
+
     const blkId = blk.record?.id || '';  // block ID from record.id
     if (!blkId) continue;
-    const idx = pageChildren.findIndex(c => c.record?.id === blkId)
-    if (idx === -1) continue
-    if (idx === -1) continue
+    // determine parent block and its children index
+    const parentId = (blk as any).struct?.record?.snapshot?.parent_id ?? pageBlockId;
+    const parentModel = findBlockById(parentId, [root as BlockModel]);
+    const siblings = parentModel?.children ?? [];
+    const idx = siblings.findIndex(c => c.record?.id === blkId);
+    if (idx === -1) continue;
 
-    // op to delete old id
-    pageOps.push({ p: ['children', idx], action: { ld: blkId } }) // delete old block
-
-    const newId = generateId()
-    // op to insert new id
-    pageOps.push({ p: ['children', idx], action: { li: newId } })
+    // ensure changeMap entry for this parent
+    if (!changeMap[parentId]) {
+      const parentVer = (parentModel as any).struct?.version ?? 1;
+      changeMap[parentId] = { id: parentId, version: parentVer, payload: { ops: [] } };
+    }
+    // delete old block and insert new mermaid block
+    const newId = generateId();
+    changeMap[parentId].payload.ops.push({ p: ['children', idx], action: { ld: blkId } });
+    changeMap[parentId].payload.ops.push({ p: ['children', idx], action: { li: newId } });
 
     const mermaidCode: string =
       blk.snapshot?.zoneState?.allText ??
@@ -156,16 +183,10 @@ const optimize = async () => {
       revisions: [],
       author: root.record.snapshot.author,
       data: { data: mermaidCode, theme: 'default', view: 'chart' },
-      parent_id: pageBlockId,
-      
-      
-      
-      
+      parent_id: (blk as any).struct?.record?.snapshot?.parent_id ?? pageBlockId,
       app_block_id: '',
       block_type_id: MERMAID_ADDON_ID,
       manifest: { view_type: 'block_h5', app_version: '0.0.100' },
-      
-      
       comment_details: {},
     }
 
@@ -176,14 +197,7 @@ const optimize = async () => {
     }
   }
 
-  if(pageOps.length > 0) {
-  // page block entry
-  changeMap[pageBlockId] = {
-    id: pageBlockId,
-    version: pageBlockVersion,
-    payload: { ops: pageOps },
-  }
-  }
+
 
 
   const body = {
