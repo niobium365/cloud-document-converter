@@ -197,6 +197,7 @@ const optimize = async () => {
   try {
     // Try to discover the exact internal batch_update endpoint by looking at
     // the `user_change` XHR the editor always fires. We then swap the suffix.
+    /*
     const discovered = (() => {
       const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[]
       for (const e of entries) {
@@ -215,16 +216,16 @@ const optimize = async () => {
       }
       return undefined
     })()
-
+    */
     // CSRF token mirrored from background into page localStorage
     const csrf = localStorage.getItem('cdc_csrf_token') ?? undefined
 
     const paths: string[] = [
       '/space/api/docx/blocks/user_change',
-      discovered,
-      `/space/api/docx/blocks/batch_update?document_id=${docToken}&document_revision_id=-1`,
-      `/space/api/docx/batch_update?document_id=${docToken}&document_revision_id=-1`,
-      `/space/api/docx/v1/batch_update?document_id=${docToken}&document_revision_id=-1`,
+      //discovered,
+      //`/space/api/docx/blocks/batch_update?document_id=${docToken}&document_revision_id=-1`,
+      //`/space/api/docx/batch_update?document_id=${docToken}&document_revision_id=-1`,
+      //`/space/api/docx/v1/batch_update?document_id=${docToken}&document_revision_id=-1`,
     ].filter((p): p is string => typeof p === 'string')
 
     let resp: Response | null = null
