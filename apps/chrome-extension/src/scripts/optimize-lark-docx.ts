@@ -220,6 +220,37 @@ const optimize = async () => {
     // CSRF token mirrored from background into page localStorage
     const csrf = localStorage.getItem('cdc_csrf_token') ?? undefined
 
+    // Stage 1: dummy op to get correct block versions for existing blocks
+    const dummyChangeMap: Record<string, ChangePayload> = {};
+    for (const [id, payload] of Object.entries(changeMap)) {
+      // only dummy for existing blocks (version > 0)
+      if (payload.version > 0) {
+        dummyChangeMap[id] = {
+          id,
+          version: 1,
+          payload: { ops: [{ p: ['background_color'], action: { od: 'rgb(2,2,2)' } }] }
+        };
+      }
+    }
+    if (Object.keys(dummyChangeMap).length) {
+      const dummyBody = { member_id: String(memberId), uuid: crypto.randomUUID(), page_id: pageBlockId, change_map: dummyChangeMap };
+      console.log('Dummy POST → /space/api/docx/blocks/user_change', dummyBody);
+      const dummyResp = await fetch('/space/api/docx/blocks/user_change', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json;charset=UTF-8', ...(csrf ? { 'x-csrftoken': csrf } : {}) },
+        body: JSON.stringify(dummyBody)
+      });
+      const dummyJson: any = await dummyResp.json();
+      console.log(`dummyJson:{}`, dummyJson);
+      if (dummyJson?.data?.block_map) {
+        const blockMap = dummyJson.data.block_map as Record<string, { id: string; version: number }>;
+        for (const [bid, info] of Object.entries(blockMap)) {
+          if (changeMap[bid]) changeMap[bid].version = info.version;
+        }
+      }
+    }
+
     const paths: string[] = [
       '/space/api/docx/blocks/user_change',
       //discovered,
