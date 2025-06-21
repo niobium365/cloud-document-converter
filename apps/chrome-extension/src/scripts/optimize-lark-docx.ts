@@ -84,8 +84,8 @@ const optimize = async () => {
   console.log(`[Optimize] Found ${mermaidBlocks.length} Mermaid block(s):`, mermaidBlocks.map(b => b.record?.id));
   const tableBlocks: BlockModel[] = pageChildren.filter((n: BlockModel) => {
     if (n.type !== 'table') return false;
-    const props = (n.snapshot as any)?.payload?.properties ?? {};
-    return !props.header_row || !props.header_column;
+    const snapshot = n.struct?.record?.snapshot as any;
+    return !snapshot?.header_row || !snapshot?.header_column;
   });
   console.log(`[Optimize] Found ${tableBlocks.length} table block(s) needing header update:`, tableBlocks.map(b => b.record?.id));
 
@@ -109,7 +109,7 @@ const optimize = async () => {
     for (const tbl of tableBlocks) {
       const tblId = tbl.record?.id as string
       if (!tblId) continue
-      const tblVer = (tbl as any).struct?.version ?? 0
+      const tblVer = (tbl as any).struct?.version ?? 1
       changeMap[tblId] = {
         id: tblId,
         version: tblVer,
@@ -176,13 +176,14 @@ const optimize = async () => {
     }
   }
 
+  if(pageOps.length > 0) {
   // page block entry
   changeMap[pageBlockId] = {
     id: pageBlockId,
     version: pageBlockVersion,
     payload: { ops: pageOps },
   }
-
+  }
 
 
   const body = {
@@ -260,7 +261,7 @@ const optimize = async () => {
       json = {}
     }
     if (resp.ok && json?.code === 0) {
-      Toast.success({ content: 'Mermaid blocks converted!' })
+      Toast.success({ content: 'Done optimizing!' })
 
     } else {
       Toast.warning({ content: `API error: ${json?.msg ?? json?.message ?? resp.status}` })
