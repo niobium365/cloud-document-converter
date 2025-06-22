@@ -850,6 +850,7 @@ export class Transformer {
             child.type === BlockType.HEADING5 ||
             child.type === BlockType.HEADING6 ||
             child.type === BlockType.HEADING7 ||
+            child.type === BlockType.TEXT ||
             child.type === BlockType.HEADING8 ||
             child.type === BlockType.HEADING9
           ) {
