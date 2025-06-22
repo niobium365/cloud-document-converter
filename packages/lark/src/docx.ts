@@ -944,8 +944,7 @@ export class Transformer {
         }
         return code
       }
-      case BlockType.QUOTE_CONTAINER:
-      case BlockType.CALLOUT: {
+      case BlockType.QUOTE_CONTAINER: {
         return this.transformParentBlock(
           block,
           () => ({
@@ -953,6 +952,23 @@ export class Transformer {
             children: [],
           }),
           nodes => mergeListItems(nodes).filter(isBlockquoteContent),
+        )
+      }
+      case BlockType.CALLOUT: {
+        return this.transformParentBlock(
+          block,
+          () => ({
+            type: 'blockquote',
+            children: [],
+          }),
+          nodes => {
+            const contentNodes = mergeListItems(nodes).filter(isBlockquoteContent);
+            // Add !!! text node in a paragraph before the other content
+            return [
+              { type: 'paragraph', children: [{ type: 'text', value: '!!!' }] },
+              ...contentNodes,
+            ];
+          },
         )
       }
       case BlockType.BULLET:
