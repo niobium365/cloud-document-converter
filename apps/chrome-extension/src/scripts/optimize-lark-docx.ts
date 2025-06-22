@@ -69,6 +69,7 @@ const optimize = async () => {
   // Find nested Mermaid plaintext blocks, all level code blocks
   const pageChildren: BlockModel[] = (root as any).children as BlockModel[];
   const nestedMermaidBlocks: BlockModel[] = [];
+  const quoteCalloutCandidates: BlockModel[] = [];
   const scanDescendants = (nodes: BlockModel[]) => {
     for (const n of nodes) {
       if (n.type === 'code') {
@@ -86,9 +87,39 @@ const optimize = async () => {
       if (n.children.length) scanDescendants(n.children);
     }
   };
+  // Scan for quote containers with !!! text as first child to convert to callouts
+  const scanForQuoteCallouts = (nodes: BlockModel[]) => {
+    for (const n of nodes) {
+      if (n.type === 'quote') {
+        // Check first child for !!! content
+        if (n.children.length > 0) {
+          const firstChild = n.children[0];
+          if (firstChild && firstChild.type === 'text') {
+            // Try to extract text content from various snapshot structures
+            const textContent = 
+              firstChild.snapshot?.zoneState?.content?.ops?.[0]?.insert ?? 
+              firstChild.snapshot?.zoneState?.allText ?? 
+              firstChild.snapshot?.text?.initialAttributedTexts?.text?.[0] ?? '';
+            
+            if (typeof textContent === 'string' && textContent.trim().startsWith('!!!')) {
+              quoteCalloutCandidates.push(n);
+              console.log('[Optimize] Found quote with !!!:', {
+                id: n.record?.id,
+                firstChildText: textContent
+              });
+            }
+          }
+        }
+      }
+      if (n.children.length) scanForQuoteCallouts(n.children);
+    }
+  };
+
   scanDescendants([root]);
+  //scanForQuoteCallouts([root]);
   const mermaidBlocks = nestedMermaidBlocks.slice(0, 10);
   window.console.log(`[Optimize] Found ${mermaidBlocks.length} nested Mermaid block(s):`, mermaidBlocks.map(b => b.record?.id));
+  window.console.log(`[Optimize] Found ${quoteCalloutCandidates.length} quote blocks to convert to callouts:`, quoteCalloutCandidates.map(b => b.record?.id));
   const tableBlocks: BlockModel[] = pageChildren.filter((n: BlockModel) => {
     if (n.type !== 'table') return false;
     const snapshot = n.struct?.record?.snapshot as any;
@@ -96,13 +127,14 @@ const optimize = async () => {
   }).slice(0, 20);
   console.log(`[Optimize] Found ${tableBlocks.length} table block(s) needing header update:`, tableBlocks.map(b => b.record?.id));
 
-  if (!mermaidBlocks.length && !tableBlocks.length) {
-    Toast.warning({ content: 'No optimizations needed for Mermaid or table headers.' });
+  if (!mermaidBlocks.length && !tableBlocks.length && !quoteCalloutCandidates.length) {
+    Toast.warning({ content: 'No optimizations needed for Mermaid, table headers, or quote conversions.' });
     return;
   }
   const summaryTasks: string[] = [];
   if (mermaidBlocks.length) summaryTasks.push(`${mermaidBlocks.length} Mermaid block(s)`);
   if (tableBlocks.length) summaryTasks.push(`${tableBlocks.length} table header(s)`);
+  if (quoteCalloutCandidates.length) summaryTasks.push(`${quoteCalloutCandidates.length} quote → callout conversion(s)`);
   Toast.info({ content: `Optimizing ${summaryTasks.join(' and ')}...` });
 
   // Build change_map for /blocks/user_change endpoint
@@ -151,6 +183,7 @@ const optimize = async () => {
 
   console.log('Page children:', pageChildren.map(c => ({ id: c.record?.id, type: c.type })));
   console.log('Mermaid blocks:', mermaidBlocks.map(b => ({ id: b.record?.id })));
+  console.log('Quote → Callout blocks:', quoteCalloutCandidates.map(b => ({ id: b.record?.id })));
   for (const blk of mermaidBlocks) {
 
     const blkId = blk.record?.id || '';  // block ID from record.id
@@ -197,8 +230,56 @@ const optimize = async () => {
     }
   }
 
+  // Process quote to callout conversions
+  for (const quoteBlock of quoteCalloutCandidates) {
+    const blockId = quoteBlock.record?.id || '';
+    if (!blockId) continue;
+    
+    // We need to update the block type directly
+    const blockVer = (quoteBlock as any).struct?.version ?? 1;
+    
+    // Set up the change operation
+    changeMap[blockId] = {
+      id: blockId,
+      version: blockVer,
+      payload: { ops: [{ p: ['type'], action: { oi: 'callout' } }] }
+    };
+    
+    // Optional: remove the !!! from the first child text if desired
+    const firstChild = quoteBlock.children[0];
+    if (firstChild && false) {
+      const firstChildId = firstChild.record?.id;
+      if (!firstChildId) continue;
 
-
+      // Try different paths to get the text content
+      const textContent = 
+        firstChild.snapshot?.zoneState?.content?.ops?.[0]?.insert ?? 
+        firstChild.snapshot?.zoneState?.allText ?? 
+        firstChild.snapshot?.text?.initialAttributedTexts?.text?.[0] ?? '';
+      
+      if (typeof textContent === 'string' && textContent.trim().startsWith('!!!')) {
+        // Create cleaned text without the !!! marker
+        const cleanedText = textContent.replace(/^!!!/, '').trim();
+        const childVer = (firstChild as any).struct?.version ?? 1;
+        
+        // Target the correct path for the text content based on the structure
+        if (firstChild.snapshot?.zoneState?.content?.ops) {
+          changeMap[firstChildId] = {
+            id: firstChildId,
+            version: childVer,
+            payload: { ops: [{ p: ['zoneState', 'content', 'ops', 0, 'insert'], action: { oi: cleanedText } }] }
+          };
+        } else if (firstChild.snapshot?.text?.initialAttributedTexts?.text) {
+          changeMap[firstChildId] = {
+            id: firstChildId,
+            version: childVer,
+            payload: { ops: [{ p: ['text', 'initialAttributedTexts', 'text', 0], action: { oi: cleanedText } }] }
+          };
+        }
+        console.log(`[Optimize] Preparing to convert quote to callout: ${blockId}, cleaning text from '${textContent}' to '${cleanedText}'`);
+      }
+    }
+  }
 
   const body = {
     member_id: String(memberId),
@@ -216,6 +297,8 @@ const optimize = async () => {
       const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[]
       for (const e of entries) {
         const url = e.name
+        if (url.includes('/blocks/user_change')) {
+          const rel = url.replace(location.origin, '')
         if (url.includes('/blocks/user_change')) {
           const rel = url.replace(location.origin, '')
           const base = rel.replace('user_change', '')
