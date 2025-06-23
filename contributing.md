@@ -37,6 +37,9 @@ $ pnpm i # install the dependencies of the project
 cd apps/chrome-extension
 npx turbo run build # build chrome extension
 
+
+pnpm --filter @dolphin/lark run build && pnpm --filter @dolphin/chrome-extension run build:dev
+
 # pnpm run build:firefox # build firefox extension
 ```
 

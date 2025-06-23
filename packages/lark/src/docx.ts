@@ -467,6 +467,7 @@ export const mergeListItems = <T extends mdast.Nodes>(
               start: node.data.seq,
             }
           : null),
+        spread: false, // tight list – avoid blank line between items
         children: nodes as mdast.ListItem[],
       }
       return list
@@ -1234,7 +1235,7 @@ export class Docx {
         gfmTaskListItemToMarkdown(),
         gfmTableToMarkdown(),
         mathToMarkdown({
-          singleDollarTextMath: false,
+          singleDollarTextMath: true,
         }),
       ],
     })
