@@ -965,7 +965,7 @@ export class Transformer {
             const contentNodes = mergeListItems(nodes).filter(isBlockquoteContent);
             // Add !!! text node in a paragraph before the other content
             return [
-              { type: 'paragraph', children: [{ type: 'text', value: '!!!' }] },
+              /*{ type: 'paragraph', children: [{ type: 'text', value: '!!!' }] },*/
               ...contentNodes,
             ];
           },
