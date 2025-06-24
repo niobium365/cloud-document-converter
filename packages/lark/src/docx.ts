@@ -657,7 +657,7 @@ export const transformOperationsToPhrasingContents = (
 
     if (insert === '\n') {
       // Soft break preserved
-      return { type: 'html', value: '<br />' } as mdast.Html;
+      return { type: 'html', value: '<br>' } as mdast.Html;
     }
     const { inlineCode, equation } = attributes ?? {}
 
@@ -986,6 +986,7 @@ export class Transformer {
           block,
           () => ({
             type: 'listItem',
+            spread: false, // tight list item to avoid blank line when nested
             children: [],
             ...(block.type === BlockType.TODO
               ? { checked: Boolean(block.snapshot.done) }
@@ -1146,14 +1147,22 @@ export class Transformer {
 
             const interleaved: mdast.PhrasingContent[] = []
             groups.forEach((group, index) => {
-              if (index > 0) {
-                interleaved.push({ type: 'html', value: '<br />' })
+              if (index > 0 && group.length) {
+                interleaved.push({ type: 'html', value: '<br>' })
               }
               interleaved.push(
                 ...group.filter(isPhrasingContent),
               )
             })
 
+            // Remove trailing <br> if it exists
+            if (
+              interleaved.length &&
+              interleaved[interleaved.length - 1].type === 'html' &&
+              /<br>/i.test((interleaved[interleaved.length - 1] as any).value)
+            ) {
+              interleaved.pop()
+            }
             return interleaved
           }
         )
