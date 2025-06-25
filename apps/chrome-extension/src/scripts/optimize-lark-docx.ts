@@ -72,10 +72,11 @@ const optimize = async () => {
     children: BlockModel[]
   }
 
-  // Find nested Mermaid plaintext blocks, all level code blocks, and quotes with !!! prefix
+  // Find nested Mermaid plaintext blocks, all level code blocks, quotes with !!! prefix, and math equations
   const pageChildren: BlockModel[] = (root as any).children as BlockModel[];
   const nestedMermaidBlocks: BlockModel[] = [];
   const quoteCalloutBlocks: BlockModel[] = [];
+  const mathTextBlocks: BlockModel[] = [];
   
   const scanDescendants = (nodes: BlockModel[]) => {
     for (const n of nodes) {
@@ -98,6 +99,22 @@ const optimize = async () => {
           quoteCalloutBlocks.push(n);
         }
       }
+      if (n.type === 'text') {
+        // Check if this is a math equation block by examining the attribToNum property
+        try {
+          const attribToNum = n.snapshot?.text?.apool?.attribToNum;
+          if (attribToNum) {
+            // Look for entries that contain 'equation,' prefix
+            const hasEquation = Object.keys(attribToNum).some(key => key.startsWith('equation,'));
+            if (hasEquation) {
+              // This is a math equation block
+              mathTextBlocks.push(n);
+            }
+          }
+        } catch (e) {
+          // Silently ignore any errors in math equation detection
+        }
+      }
       if (n.children.length) scanDescendants(n.children);
     }
   };
@@ -114,7 +131,10 @@ const optimize = async () => {
   const calloutBlocks = quoteCalloutBlocks.slice(0, 10);
   console.log(`[Optimize] Found ${calloutBlocks.length} quote block(s) to convert to callout:`, calloutBlocks.map(b => b.record?.id));
 
-  if (!mermaidBlocks.length && !tableBlocks.length && !calloutBlocks.length) {
+  const mathBlocks = mathTextBlocks.slice(0, 20);
+  console.log(`[Optimize] Found ${mathBlocks.length} math equation text block(s) to center:`, mathBlocks.map(b => b.record?.id));
+
+  if (!mermaidBlocks.length && !tableBlocks.length && !calloutBlocks.length && !mathBlocks.length) {
     Toast.warning({ content: 'No optimizations needed.' });
     return;
   }
@@ -122,6 +142,7 @@ const optimize = async () => {
   if (mermaidBlocks.length) summaryTasks.push(`${mermaidBlocks.length} Mermaid block(s)`);
   if (tableBlocks.length) summaryTasks.push(`${tableBlocks.length} table header(s)`);
   if (calloutBlocks.length) summaryTasks.push(`${calloutBlocks.length} callout(s)`);
+  if (mathBlocks.length) summaryTasks.push(`${mathBlocks.length} math equation(s)`);
   Toast.info({ content: `Optimizing ${summaryTasks.join(' and ')}...` });
 
   // Build change_map for /blocks/user_change endpoint
@@ -156,6 +177,26 @@ const optimize = async () => {
           ]
         }
       }
+    }
+  }
+  
+  // Apply center alignment to math equation text blocks
+  if (mathBlocks.length) {
+    for (const mathBlock of mathBlocks) {
+      const mathId = mathBlock.record?.id as string;
+      if (!mathId) continue;
+      const mathVer = (mathBlock as any).struct?.version ?? 1;
+      
+      // Create change operation to center align the math block
+      changeMap[mathId] = {
+        id: mathId,
+        version: mathVer,
+        payload: {
+          ops: [
+            { p: ['align'], action: { oi: 'center' } }
+          ]
+        }
+      };
     }
   }
   
