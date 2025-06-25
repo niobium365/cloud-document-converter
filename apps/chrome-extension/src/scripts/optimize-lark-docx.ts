@@ -11,6 +11,12 @@ import { Toast } from '@dolphin/lark'
 
 const MERMAID_ADDON_ID = 'blk_631fefbbae02400430b8f9f4'
 
+// helper to generate 27-character base62 block ID
+const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const generateId = (): string =>
+  Array.from({ length: 27 })  // block IDs are 27-char base62
+    .map(() => ALPHABET[Math.floor(Math.random() * ALPHABET.length)])
+    .join('');
 
 const optimize = async () => {
   // @ts-ignore – PageMain is injected by the Lark editor runtime
@@ -66,9 +72,11 @@ const optimize = async () => {
     children: BlockModel[]
   }
 
-  // Find nested Mermaid plaintext blocks, all level code blocks
+  // Find nested Mermaid plaintext blocks, all level code blocks, and quotes with $$$ prefix
   const pageChildren: BlockModel[] = (root as any).children as BlockModel[];
   const nestedMermaidBlocks: BlockModel[] = [];
+  const quoteCalloutBlocks: BlockModel[] = [];
+  
   const scanDescendants = (nodes: BlockModel[]) => {
     for (const n of nodes) {
       if (n.type === 'code') {
@@ -83,6 +91,13 @@ const optimize = async () => {
           mermaidPlainRegex.test(code);
         if (isMermaid) nestedMermaidBlocks.push(n);
       }
+      if (n.type === 'quote') {
+        // Check if quote block text starts with $$$
+        const text = n.snapshot?.text?.initialAttributedTexts?.text?.[0] ?? '';
+        if (text.startsWith('$$$')) {
+          quoteCalloutBlocks.push(n);
+        }
+      }
       if (n.children.length) scanDescendants(n.children);
     }
   };
@@ -95,14 +110,18 @@ const optimize = async () => {
     return !snapshot?.header_row || !snapshot?.header_column;
   }).slice(0, 20);
   console.log(`[Optimize] Found ${tableBlocks.length} table block(s) needing header update:`, tableBlocks.map(b => b.record?.id));
+  
+  const calloutBlocks = quoteCalloutBlocks.slice(0, 10);
+  console.log(`[Optimize] Found ${calloutBlocks.length} quote block(s) to convert to callout:`, calloutBlocks.map(b => b.record?.id));
 
-  if (!mermaidBlocks.length && !tableBlocks.length) {
-    Toast.warning({ content: 'No optimizations needed for Mermaid or table headers.' });
+  if (!mermaidBlocks.length && !tableBlocks.length && !calloutBlocks.length) {
+    Toast.warning({ content: 'No optimizations needed.' });
     return;
   }
   const summaryTasks: string[] = [];
   if (mermaidBlocks.length) summaryTasks.push(`${mermaidBlocks.length} Mermaid block(s)`);
   if (tableBlocks.length) summaryTasks.push(`${tableBlocks.length} table header(s)`);
+  if (calloutBlocks.length) summaryTasks.push(`${calloutBlocks.length} callout(s)`);
   Toast.info({ content: `Optimizing ${summaryTasks.join(' and ')}...` });
 
   // Build change_map for /blocks/user_change endpoint
@@ -139,13 +158,87 @@ const optimize = async () => {
       }
     }
   }
+  
+  // Convert quote blocks with $$$ prefix to callout blocks
+  if (calloutBlocks.length) {
+    for (const quote of calloutBlocks) {
+      const quoteId = quote.record?.id as string;
+      if (!quoteId) continue;
+      
+      // Extract the content directly from the quote block
+      const textContent = quote.snapshot?.text?.initialAttributedTexts?.text?.[0] ?? '';
+      const cleanContent = textContent.replace(/^\$\$\$\s*/, ''); // Remove $$$ prefix
+      
+      // determine parent block (usually page) and position index
+      const parentId = (quote as any).struct?.record?.snapshot?.parent_id ?? pageBlockId;
+      const parentModel = findBlockById(parentId, [root as BlockModel]);
+      const siblings = parentModel?.children ?? [];
+      const idx = siblings.findIndex(c => c.record?.id === quoteId);
+      if (idx === -1) continue;
+      
+      // ensure changeMap entry for this parent
+      if (!changeMap[parentId]) {
+        const parentVer = (parentModel as any).struct?.version ?? 1;
+        changeMap[parentId] = { id: parentId, version: parentVer, payload: { ops: [] } };
+      }
+      
+      // delete old quote block and insert new callout block
+      const newId = generateId();
+      changeMap[parentId].payload.ops.push({ p: ['children', idx], action: { ld: quoteId } });
+      changeMap[parentId].payload.ops.push({ p: ['children', idx], action: { li: newId } });
+      
+      // Create a new callout block with the content
+      changeMap[newId] = {
+        id: newId,
+        version: 0,
+        payload: { 
+          ops: [{ 
+            p: [], 
+            action: { 
+              oi: {
+                type: 'callout',
+                children: [],
+                comments: [],
+                revisions: [],
+                author: root.record.snapshot.author,
+                parent_id: parentId
+              } 
+            } 
+          }] 
+        },
+      };
+      
+      // Add a text block as child of the callout with the content
+      const textBlockId = generateId();
+      changeMap[newId].payload.ops.push({
+        p: ['children'],
+        action: { li: textBlockId }
+      });
+      
+      // Create the text block with the content
+      changeMap[textBlockId] = {
+        id: textBlockId,
+        version: 0,
+        payload: {
+          ops: [{
+            p: [],
+            action: {
+              oi: {
+                type: 'text',
+                parent_id: newId,
+                text: {
+                  initialAttributedTexts: {
+                    text: { 0: cleanContent }
+                  }
+                }
+              }
+            }
+          }]
+        }
+      };
+    }
+  }
 
-  // helper to generate 27-character base62 block ID
-  const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const generateId = (): string =>
-    Array.from({ length: 27 })  // block IDs are 27-char base62
-      .map(() => ALPHABET[Math.floor(Math.random() * ALPHABET.length)])
-      .join('');
 
 
 
