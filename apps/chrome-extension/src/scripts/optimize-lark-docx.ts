@@ -220,13 +220,31 @@ const optimize = async () => {
         id: quoteId,
         version: 1,  // Increment version for the update
         payload: {
-          ops: [{
-            p: ['parent_id'],
-            action: {
-              od: parentId,         // Original parent (the page or container)
-              oi: newId            // New parent (the callout)
+          ops: [
+            {
+              p: ['parent_id'],
+              action: {
+                od: parentId,         // Original parent (the page or container)
+                oi: newId            // New parent (the callout)
+              }
+            },
+            // Add operation to correctly remove the leading $$$ prefix
+            {
+              p: ['text'],
+              subType: {
+                t: 'easysync',
+                o: {
+                  zone_changesets: {
+                    0: 'Z:b<3-3$'  // Remove first 3 characters ($$$)
+                  },
+                  apool: {
+                    numToAttrib: {},
+                    nextNum: 0
+                  }
+                }
+              }
             }
-          }]
+          ]
         }
       };
       
