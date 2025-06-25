@@ -215,7 +215,7 @@ const optimize = async () => {
         },
       };
       
-      // Reuse the original text block by changing its parent_id
+      // Reuse the original quote block by changing its parent_id and type to text
       changeMap[quoteId] = {
         id: quoteId,
         version: 1,  // Increment version for the update
@@ -226,6 +226,14 @@ const optimize = async () => {
               action: {
                 od: parentId,         // Original parent (the page or container)
                 oi: newId            // New parent (the callout)
+              }
+            },
+            // Change block type from 'quote' to 'text'
+            {
+              p: ['type'],
+              action: {
+                od: 'quote',  // Original type
+                oi: 'text'   // New type
               }
             },
             // Add operation to correctly remove the leading $$$ prefix
