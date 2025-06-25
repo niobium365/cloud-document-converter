@@ -107,8 +107,12 @@ const optimize = async () => {
             // Look for entries that contain 'equation,' prefix
             const hasEquation = Object.keys(attribToNum).some(key => key.startsWith('equation,'));
             if (hasEquation) {
-              // This is a math equation block
-              mathTextBlocks.push(n);
+              // Check if the block is already centered
+              const currentAlign = n.snapshot?.align;
+              if (currentAlign !== 'center') {
+                // Only add blocks that are not already centered
+                mathTextBlocks.push(n);
+              }
             }
           }
         } catch (e) {
