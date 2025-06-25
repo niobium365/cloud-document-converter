@@ -971,11 +971,11 @@ export class Transformer {
               if (firstPara.children && firstPara.children.length > 0 && firstPara.children[0].type === 'text') {
                 // Prefix with $$$ if it doesn't already have it
                 if (!firstPara.children[0].value.startsWith('$$$')) {
-                  firstPara.children[0].value = '$$$ ' + firstPara.children[0].value;
+                  firstPara.children[0].value = '$$$' + firstPara.children[0].value;
                 }
               } else if (firstPara.children) {
                 // Insert new text node with $$$ at the beginning of the paragraph
-                firstPara.children.unshift({ type: 'text', value: '$$$ ' });
+                firstPara.children.unshift({ type: 'text', value: '$$$' });
               }
             } else if (contentNodes.length === 0) {
               // If no content, create a paragraph with $$$

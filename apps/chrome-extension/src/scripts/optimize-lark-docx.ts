@@ -244,8 +244,8 @@ const optimize = async () => {
                 o: {
                   zone_changesets: {
                     // Calculate length of the original text to properly format easysync command
-                    // Format: Z:{length}<3-3$
-                    0: `Z:${textContent.length}<3-3$`  // Remove first 3 characters ($$$)
+                    // Format: Z:{length-base36}<3-3$ where length is encoded in base36
+                    0: `Z:${textContent.length.toString(36)}<3-3$`  // Remove first 3 characters ($$$)
                   },
                   apool: {
                     numToAttrib: {},
