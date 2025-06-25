@@ -187,7 +187,7 @@ const optimize = async () => {
       changeMap[parentId].payload.ops.push({ p: ['children', idx], action: { ld: quoteId } });
       changeMap[parentId].payload.ops.push({ p: ['children', idx], action: { li: newId } });
       
-      // Create a new callout block with the content
+      // Create a new callout block with proper properties
       changeMap[newId] = {
         id: newId,
         version: 0,
@@ -201,41 +201,42 @@ const optimize = async () => {
                 comments: [],
                 revisions: [],
                 author: root.record.snapshot.author,
-                parent_id: parentId
+                parent_id: parentId,
+                // Required callout properties
+                emoji_id: 'bulb',                  // Light bulb emoji
+                emoji_value: '1f4a1',              // Light bulb unicode
+                background_color: 'rgb(255,245,235)',  // Light orange background
+                border_color: 'rgb(254,212,164)',      // Orange border
+                text_color: '',                     // Default text color
+                align: 'left'                       // Text alignment
               } 
             } 
           }] 
         },
       };
       
-      // Add a text block as child of the callout with the content
-      const textBlockId = generateId();
-      changeMap[newId].payload.ops.push({
-        p: ['children'],
-        action: { li: textBlockId }
-      });
-      
-      // Create the text block with the content
-      changeMap[textBlockId] = {
-        id: textBlockId,
-        version: 0,
+      // Reuse the original text block by changing its parent_id
+      changeMap[quoteId] = {
+        id: quoteId,
+        version: 1,  // Increment version for the update
         payload: {
           ops: [{
-            p: [],
+            p: ['parent_id'],
             action: {
-              oi: {
-                type: 'text',
-                parent_id: newId,
-                text: {
-                  initialAttributedTexts: {
-                    text: { 0: cleanContent }
-                  }
-                }
-              }
+              od: parentId,         // Original parent (the page or container)
+              oi: newId            // New parent (the callout)
             }
           }]
         }
       };
+      
+      // Add the original text block as a child of the callout
+      changeMap[newId].payload.ops.push({
+        p: ['children', 0],
+        action: { li: quoteId }
+      });
+      
+      // We don't need to create a new text block since we're reusing the original
     }
   }
 
