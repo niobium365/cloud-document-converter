@@ -109,14 +109,36 @@ const optimize = async () => {
             if (hasEquation) {
               // Check if the block is already centered
               const currentAlign = n.snapshot?.align;
-              if (currentAlign !== 'center') {
-                // Only add blocks that are not already centered
+              
+              // Check if the text contains only the math equation (no additional text)
+              const textContent = n.snapshot?.text?.initialAttributedTexts?.text?.[0] || '';
+              
+              // Extract equation text from attribToNum keys
+              let equationText = '';
+              for (const key of Object.keys(attribToNum)) {
+                if (key.startsWith('equation,')) {
+                  // Extract the equation part after 'equation,'
+                  const match = key.match(/^equation,(.+)$/);
+                  if (match && match[1]) {
+                    equationText = match[1];
+                    break;
+                  }
+                }
+              }
+              
+              // Check if text content is just the equation (allowing for whitespace)
+              const isPureEquation = !!equationText && 
+                 textContent.trim().replace(/\n$/, '') === '';
+                
+              if (currentAlign !== 'center' && isPureEquation) {
+                // Only add blocks that are not already centered and contain pure equations
                 mathTextBlocks.push(n);
               }
             }
           }
         } catch (e) {
           // Silently ignore any errors in math equation detection
+          console.log('[Optimize] Error detecting math equation:', e);
         }
       }
       if (n.children.length) scanDescendants(n.children);
