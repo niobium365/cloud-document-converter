@@ -100,12 +100,24 @@ const optimize = async () => {
         }
       }
       if (n.type === 'text') {
-        // Check if this is a math equation block by examining the attribToNum property
+        // Check if this is a math equation block by examining the numToAttrib property
         try {
-          const attribToNum = n.snapshot?.text?.apool?.attribToNum;
-          if (attribToNum) {
-            // Look for entries that contain 'equation,' prefix
-            const hasEquation = Object.keys(attribToNum).some(key => key.startsWith('equation,'));
+          const numToAttrib = n.snapshot?.text?.apool?.numToAttrib;
+          if (numToAttrib) {
+            // Look for entries that have 'equation' as the first element in their array
+            let hasEquation = false;
+            let equationText = '';
+            
+            // Scan through numToAttrib entries looking for equation attribute
+            for (const key in numToAttrib) {
+              const attr = numToAttrib[key];
+              if (Array.isArray(attr) && attr.length >= 2 && attr[0] === 'equation') {
+                hasEquation = true;
+                equationText = attr[1];
+                break;
+              }
+            }
+            
             if (hasEquation) {
               // Check if the block is already centered
               const currentAlign = n.snapshot?.align;
@@ -113,26 +125,15 @@ const optimize = async () => {
               // Check if the text contains only the math equation (no additional text)
               const textContent = n.snapshot?.text?.initialAttributedTexts?.text?.[0] || '';
               
-              // Extract equation text from attribToNum keys
-              let equationText = '';
-              for (const key of Object.keys(attribToNum)) {
-                if (key.startsWith('equation,')) {
-                  // Extract the equation part after 'equation,'
-                  const match = key.match(/^equation,(.+)$/);
-                  if (match && match[1]) {
-                    equationText = match[1];
-                    break;
-                  }
-                }
-              }
-              
-              // Check if text content is just the equation (allowing for whitespace)
-              const isPureEquation = !!equationText && 
-                 textContent.trim().replace(/\n$/, '') === '';
+              // For math equation blocks, check if it's a standalone equation
+              // We use the textContent.trim() === '' condition to identify standalone equation blocks
+              // that contain only the equation with no additional text
+              const isStandaloneEquation = textContent.trim().replace(/\n$/, '') === '';
                 
-              if (currentAlign !== 'center' && isPureEquation) {
+              if (currentAlign !== 'center' && isStandaloneEquation) {
                 // Only add blocks that are not already centered and contain pure equations
                 mathTextBlocks.push(n);
+                console.log(`[Optimize] Found math equation to center: ${equationText.substring(0, 20)}...`);
               }
             }
           }
