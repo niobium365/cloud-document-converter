@@ -40,6 +40,8 @@ npx turbo run build # build chrome extension
 
 pnpm --filter @dolphin/lark run build && pnpm --filter @dolphin/chrome-extension run build:dev
 
+scp jdu@192.168.23.133:~/cloud-document-converter/apps/chrome-extension/ce.zip /mnt/c/temp/ && unzip -o /mnt/c/temp/ce.zip -d /mnt/c/temp/ce/
+
 # pnpm run build:firefox # build firefox extension
 ```
 

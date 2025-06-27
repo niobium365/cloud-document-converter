@@ -1082,10 +1082,14 @@ export class Transformer {
         }
 
         if (typeof mermaidCode === 'string' && mermaidCode.trim()) {
+          // Convert non-breaking spaces (\u00A0, &nbsp;) to regular spaces
+          // This improves compatibility with Markdown processors
+          const cleanedCode = mermaidCode.replace(/\u00A0/g, ' ')
+          
           const code: mdast.Code = {
             type: 'code',
             lang: 'mermaid',
-            value: trimEndEnter(mermaidCode),
+            value: trimEndEnter(cleanedCode),
           }
           return code
         }
@@ -1158,29 +1162,114 @@ export class Transformer {
           block,
           () => ({ type: 'tableCell', children: [] }),
           nodes => {
-            const groups = nodes.map(node =>
-              node.type === 'paragraph' ? node.children : [node],
-            ) as mdast.PhrasingContent[][]
-
-            const interleaved: mdast.PhrasingContent[] = []
-            groups.forEach((group, index) => {
-              if (index > 0 && group.length) {
-                interleaved.push({ type: 'html', value: '<br>' })
+            // For markdown tables, we need to convert everything to inline content with <br> tags
+            const groups = nodes.map(node => {
+              // Handle raw bullet/ordered/todo blocks
+              if ((node as any).type === BlockType.BULLET || 
+                  (node as any).type === BlockType.ORDERED || 
+                  (node as any).type === BlockType.TODO) {
+                // Create a marker based on block type
+                let marker = '• ';
+                if ((node as any).type === BlockType.ORDERED) {
+                  marker = '1. ';
+                } else if ((node as any).type === BlockType.TODO) {
+                  marker = (node as any).snapshot?.done ? '☑ ' : '☐ ';
+                }
+                
+                // Convert to text nodes
+                const content: mdast.PhrasingContent[] = [
+                  { type: 'text', value: marker }
+                ];
+                
+                // Add text content from the block
+                const ops = (node as any).zoneState?.content?.ops || [];
+                content.push(...transformOperationsToPhrasingContents(
+                  ops,
+                  { preserveBreak: true }
+                ));
+                
+                return content;
               }
-              interleaved.push(
-                ...group.filter(isPhrasingContent),
-              )
-            })
-
-            // Remove trailing <br> if it exists
-            if (
-              interleaved.length &&
-              interleaved[interleaved.length - 1].type === 'html' &&
-              /<br>/i.test((interleaved[interleaved.length - 1] as any).value)
-            ) {
-              interleaved.pop()
-            }
-            return interleaved
+              // Handle listItem nodes directly
+              else if (node.type === 'listItem') {
+                // Create item content with appropriate marker
+                const listContent: mdast.PhrasingContent[] = [];
+                
+                // Add bullet marker for list items (default to bullet style)
+                listContent.push({ type: 'text', value: '• ' });
+                
+                // Process the content
+                if (node.children && node.children.length) {
+                  node.children.forEach(child => {
+                    if (child.type === 'paragraph' && child.children) {
+                      listContent.push(...child.children.filter(isPhrasingContent));
+                    }
+                  });
+                }
+                
+                return listContent;
+              }
+              // Also handle list nodes if present
+              else if (node.type === 'list') {
+                // Collect all list item contents
+                const listContent: mdast.PhrasingContent[] = [];
+                if (node.children && node.children.length) {
+                  node.children.forEach((listItem, index) => {
+                    if (listItem.type === 'listItem') {
+                      // Add spacing between items if needed
+                      if (index > 0) {
+                        listContent.push({ type: 'html', value: '<br>' });
+                      }
+                      
+                      // Add the list marker
+                      const marker = node.ordered ? `${index + 1}. ` : '• ';
+                      listContent.push({ type: 'text', value: marker });
+                      
+                      // Add the list item content
+                      if (listItem.children && listItem.children.length) {
+                        listItem.children.forEach(child => {
+                          if (child.type === 'paragraph' && child.children) {
+                            listContent.push(...child.children.filter(isPhrasingContent));
+                          }
+                        });
+                      }
+                    }
+                  });
+                }
+                return listContent;
+              }
+              // Handle regular paragraph blocks
+              else if (node.type === 'paragraph') {
+                return node.children || [];
+              }
+              // Handle plain text or other inline content
+              else if (isPhrasingContent(node)) {
+                return [node];
+              }
+              // Handle other block types by converting them to text
+              else if ((node as any).zoneState?.content?.ops) {
+                return transformOperationsToPhrasingContents(
+                  (node as any).zoneState.content.ops,
+                  { preserveBreak: true }
+                );
+              }
+              
+              return [];
+            });
+            
+            // Filter out empty groups and flatten
+            const nonEmptyGroups = groups.filter(group => group.length > 0);
+            
+            // Interleave with <br> tags
+            const interleaved: mdast.PhrasingContent[] = [];
+            nonEmptyGroups.forEach((group, index) => {
+              if (index > 0) {
+                interleaved.push({ type: 'html', value: '<br>' });
+              }
+              interleaved.push(...group);
+            });
+            
+            return interleaved;
           }
         )
       }
