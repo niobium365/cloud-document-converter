@@ -146,19 +146,19 @@ const optimize = async () => {
     }
   };
   scanDescendants([root]);
-  const mermaidBlocks = nestedMermaidBlocks.slice(0, 10);
+  const mermaidBlocks = nestedMermaidBlocks.slice(0, 40);
   window.console.log(`[Optimize] Found ${mermaidBlocks.length} nested Mermaid block(s):`, mermaidBlocks.map(b => b.record?.id));
   const tableBlocks: BlockModel[] = pageChildren.filter((n: BlockModel) => {
     if (n.type !== 'table') return false;
     const snapshot = n.struct?.record?.snapshot as any;
     return !snapshot?.header_row || !snapshot?.header_column;
-  }).slice(0, 20);
+  }).slice(0, 40);
   console.log(`[Optimize] Found ${tableBlocks.length} table block(s) needing header update:`, tableBlocks.map(b => b.record?.id));
   
-  const calloutBlocks = quoteCalloutBlocks.slice(0, 10);
+  const calloutBlocks = quoteCalloutBlocks.slice(0, 40);
   console.log(`[Optimize] Found ${calloutBlocks.length} quote block(s) to convert to callout:`, calloutBlocks.map(b => b.record?.id));
 
-  const mathBlocks = mathTextBlocks.slice(0, 20);
+  const mathBlocks = mathTextBlocks.slice(0, 40);
   console.log(`[Optimize] Found ${mathBlocks.length} math equation text block(s) to center:`, mathBlocks.map(b => b.record?.id));
 
   if (!mermaidBlocks.length && !tableBlocks.length && !calloutBlocks.length && !mathBlocks.length) {
