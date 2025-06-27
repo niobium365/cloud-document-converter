@@ -1215,11 +1215,18 @@ export class Transformer {
                               listContent.push({ type: 'html', value: '<br>' });
                             }
                             
-                            // Create indented marker for nested items
-                            const nestedMarker = child.ordered ? 
-                              ` &nbsp;&nbsp;&nbsp;&nbsp; ${nestedIndex + 1}. ` : 
-                              ' &nbsp;&nbsp;&nbsp;&nbsp; • ';
-                            listContent.push({ type: 'text', value: nestedMarker });
+                            // Create indent using HTML node for non-breaking spaces
+                            listContent.push({ type: 'html', value: '&nbsp;&nbsp;&nbsp;&nbsp;' });
+                            
+                            // Add the marker as text node
+                            if (child.ordered) {
+                              listContent.push({ type: 'text', value: `${nestedIndex + 1}.` });
+                            } else {
+                              listContent.push({ type: 'text', value: '•' });
+                            }
+                            
+                            // Add space after marker
+                            listContent.push({ type: 'html', value: '&nbsp;' });
                             
                             // Add nested list item content
                             if (nestedItem.children && nestedItem.children.length) {
@@ -1273,8 +1280,8 @@ export class Transformer {
                                   
                                   // Create indented marker for nested items
                                   const nestedMarker = child.ordered ? 
-                                    `  ${nestedIndex + 1}. ` : 
-                                    '  • ';
+                                    `&nbsp;&nbsp;&nbsp;&nbsp;${nestedIndex + 1}. ` : 
+                                    '&nbsp;&nbsp;&nbsp;&nbsp;• ';
                                   listContent.push({ type: 'text', value: nestedMarker });
                                   
                                   // Add nested list item content
