@@ -1203,6 +1203,35 @@ export class Transformer {
                   node.children.forEach(child => {
                     if (child.type === 'paragraph' && child.children) {
                       listContent.push(...child.children.filter(isPhrasingContent));
+                    } else if (child.type === 'list') {
+                      // Handle nested lists by adding a line break before nested content
+                      // listContent.push({ type: 'html', value: '<br>' });
+                      
+                      // Process each nested list item with proper indentation
+                      if (child.children && child.children.length) {
+                        child.children.forEach((nestedItem, nestedIndex) => {
+                          if (nestedItem.type === 'listItem') {
+                            if (nestedIndex > 0) {
+                              listContent.push({ type: 'html', value: '<br>' });
+                            }
+                            
+                            // Create indented marker for nested items
+                            const nestedMarker = child.ordered ? 
+                              ` &nbsp;&nbsp;&nbsp;&nbsp; ${nestedIndex + 1}. ` : 
+                              ' &nbsp;&nbsp;&nbsp;&nbsp; • ';
+                            listContent.push({ type: 'text', value: nestedMarker });
+                            
+                            // Add nested list item content
+                            if (nestedItem.children && nestedItem.children.length) {
+                              nestedItem.children.forEach(grandChild => {
+                                if (grandChild.type === 'paragraph' && grandChild.children) {
+                                  listContent.push(...grandChild.children.filter(isPhrasingContent));
+                                }
+                              });
+                            }
+                          }
+                        });
+                      }
                     }
                   });
                 }
@@ -1230,6 +1259,35 @@ export class Transformer {
                         listItem.children.forEach(child => {
                           if (child.type === 'paragraph' && child.children) {
                             listContent.push(...child.children.filter(isPhrasingContent));
+                          } else if (child.type === 'list') {
+                            // Handle nested lists by adding a line break before nested content
+                            listContent.push({ type: 'html', value: '<br>' });
+                            
+                            // Process each nested list item with proper indentation
+                            if (child.children && child.children.length) {
+                              child.children.forEach((nestedItem, nestedIndex) => {
+                                if (nestedItem.type === 'listItem') {
+                                  if (nestedIndex > 0) {
+                                    listContent.push({ type: 'html', value: '<br>' });
+                                  }
+                                  
+                                  // Create indented marker for nested items
+                                  const nestedMarker = child.ordered ? 
+                                    `  ${nestedIndex + 1}. ` : 
+                                    '  • ';
+                                  listContent.push({ type: 'text', value: nestedMarker });
+                                  
+                                  // Add nested list item content
+                                  if (nestedItem.children && nestedItem.children.length) {
+                                    nestedItem.children.forEach(grandChild => {
+                                      if (grandChild.type === 'paragraph' && grandChild.children) {
+                                        listContent.push(...grandChild.children.filter(isPhrasingContent));
+                                      }
+                                    });
+                                  }
+                                }
+                              });
+                            }
                           }
                         });
                       }
