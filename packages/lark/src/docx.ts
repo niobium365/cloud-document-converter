@@ -965,23 +965,23 @@ export class Transformer {
           nodes => {
             const contentNodes = mergeListItems(nodes).filter(isBlockquoteContent);
             
-            // Prefix first paragraph with !!!
+            // Prefix first paragraph with ^^^
             if (contentNodes.length > 0 && contentNodes[0].type === 'paragraph') {
               const firstPara = contentNodes[0];
               if (firstPara.children && firstPara.children.length > 0 && firstPara.children[0].type === 'text') {
-                // Prefix with !!! if it doesn't already have it
-                if (!firstPara.children[0].value.startsWith('!!!')) {
-                  firstPara.children[0].value = '!!!' + firstPara.children[0].value;
+                // Prefix with ^^^ if it doesn't already have it
+                if (!firstPara.children[0].value.startsWith('^^^')) {
+                  firstPara.children[0].value = '^^^' + firstPara.children[0].value;
                 }
               } else if (firstPara.children) {
-                // Insert new text node with !!! at the beginning of the paragraph
-                firstPara.children.unshift({ type: 'text', value: '!!!' });
+                // Insert new text node with ^^^ at the beginning of the paragraph
+                firstPara.children.unshift({ type: 'text', value: '^^^' });
               }
             } else if (contentNodes.length === 0) {
-              // If no content, create a paragraph with !!!
+              // If no content, create a paragraph with ^^^
               contentNodes.push({
                 type: 'paragraph', 
-                children: [{ type: 'text', value: '!!!' }]
+                children: [{ type: 'text', value: '^^^' }]
               });
             }
             

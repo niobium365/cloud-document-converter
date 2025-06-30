@@ -72,7 +72,7 @@ const optimize = async () => {
     children: BlockModel[]
   }
 
-  // Find nested Mermaid plaintext blocks, all level code blocks, quotes with !!! prefix, and math equations
+  // Find nested Mermaid plaintext blocks, all level code blocks, quotes with ^^^ prefix, and math equations
   const pageChildren: BlockModel[] = (root as any).children as BlockModel[];
   const nestedMermaidBlocks: BlockModel[] = [];
   const quoteCalloutBlocks: BlockModel[] = [];
@@ -93,9 +93,9 @@ const optimize = async () => {
         if (isMermaid) nestedMermaidBlocks.push(n);
       }
       if (n.type === 'quote') {
-        // Check if quote block text starts with !!!
+        // Check if quote block text starts with ^^^
         const text = n.snapshot?.text?.initialAttributedTexts?.text?.[0] ?? '';
-        if (text.startsWith('!!!')) {
+        if (text.startsWith('^^^')) {
           quoteCalloutBlocks.push(n);
         }
       }
@@ -227,7 +227,7 @@ const optimize = async () => {
     }
   }
   
-  // Convert quote blocks with !!! prefix to callout blocks
+  // Convert quote blocks with ^^^ prefix to callout blocks
   if (calloutBlocks.length) {
     for (const quote of calloutBlocks) {
       const quoteId = quote.record?.id as string;
@@ -235,7 +235,7 @@ const optimize = async () => {
       
       // Extract the content directly from the quote block
       const textContent = quote.snapshot?.text?.initialAttributedTexts?.text?.[0] ?? '';
-      const cleanContent = textContent.replace(/^!!!\s*/, ''); // Remove !!! prefix
+      const cleanContent = textContent.replace(/^^^^\s*/, ''); // Remove ^^^ prefix
       
       // determine parent block (usually page) and position index
       const parentId = (quote as any).struct?.record?.snapshot?.parent_id ?? pageBlockId;
@@ -304,7 +304,7 @@ const optimize = async () => {
                 oi: 'text'   // New type
               }
             },
-            // Add operation to correctly remove the leading !!! prefix
+            // Add operation to correctly remove the leading ^^^ prefix
             {
               p: ['text'],
               subType: {
@@ -313,7 +313,7 @@ const optimize = async () => {
                   zone_changesets: {
                     // Calculate length of the original text to properly format easysync command
                     // Format: Z:{length-base36}<3-3$ where length is encoded in base36
-                    0: `Z:${textContent.length.toString(36)}<3-3$`  // Remove first 3 characters (!!!)
+                    0: `Z:${textContent.length.toString(36)}<3-3$`  // Remove first 3 characters (^^^)
                   },
                   apool: {
                     numToAttrib: {},
