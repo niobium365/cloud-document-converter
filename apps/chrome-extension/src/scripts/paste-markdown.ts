@@ -183,6 +183,119 @@ const insertParagraph = async (
       return { type: 'text', content: text };
     };
     
+    // Helper function to parse Markdown formatting
+    type FormattingType = 'bold' | 'italic' | 'strikethrough';
+    
+    interface TextSegment {
+      text: string;
+      formats: FormattingType[];
+    }
+    
+    interface ParsedText {
+      text: string;
+      attribs: string;
+      formatTypes: Record<string, [string, string]>;
+    }
+    
+    const parseMarkdownFormatting = (text: string): ParsedText => {
+      // Initialize the result
+      const result: ParsedText = {
+        text: text,
+        attribs: '',
+        formatTypes: {
+          // Start with author attribute
+          '0': ['author', author]
+        }
+      };
+      
+      // If there's no special formatting, return simple format
+      if (!text.includes('**') && !text.includes('*') && !text.includes('~~')) {
+        result.attribs = `*0+${text.length.toString(36)}`;
+        return result;
+      }
+      
+      // Format markers and their corresponding attribute types
+      const formatMarkers = [
+        { marker: '**', type: 'bold' },
+        { marker: '*', type: 'italic' },
+        { marker: '~~', type: 'strikethrough' }
+      ];
+      
+      // Split the text into segments based on the Markdown formatting
+      let segments: TextSegment[] = [{ text: text, formats: [] }];
+      
+      // Process each format marker
+      for (const { marker, type } of formatMarkers) {
+        let newSegments: TextSegment[] = [];
+        
+        for (const segment of segments) {
+          if (segment.formats.includes(type as FormattingType)) {
+            // Already has this format, keep as is
+            newSegments.push(segment);
+            continue;
+          }
+          
+          const parts = segment.text.split(marker);
+          if (parts.length === 1) {
+            // No marker found, keep as is
+            newSegments.push(segment);
+            continue;
+          }
+          
+          let isFormatted = false;
+          for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            if (part === '') continue;
+            
+            if (isFormatted) {
+              newSegments.push({
+                text: part,
+                formats: [...segment.formats, type as FormattingType]
+              });
+            } else {
+              newSegments.push({
+                text: part,
+                formats: [...segment.formats]
+              });
+            }
+            isFormatted = !isFormatted;
+          }
+        }
+        
+        segments = newSegments;
+      }
+      
+      // Combine all segments into a single text
+      let plainText = '';
+      let attribs = '';
+      let nextNum = 1; // Start from 1 since 0 is reserved for author
+      const formatTypeMap: Record<string, number> = {};
+      
+      for (const segment of segments) {
+        plainText += segment.text;
+        
+        // Create attribute string for this segment
+        let segAttrib = '*0'; // Always include author
+        
+        // Add format attributes
+        for (const format of segment.formats) {
+          if (!formatTypeMap[format]) {
+            formatTypeMap[format] = nextNum++;
+            result.formatTypes[formatTypeMap[format].toString()] = [format, 'true'];
+          }
+          segAttrib += `*${formatTypeMap[format]}`;
+        }
+        
+        // Add length in base36
+        segAttrib += `+${segment.text.length.toString(36)}`;
+        attribs += segAttrib;
+      }
+      
+      result.text = plainText;
+      result.attribs = attribs;
+      return result;
+    };
+    
     // Add each paragraph block to the change_map
     // Use the original order of blockIds for the content
     newBlockIds.forEach((blockId, index) => {
@@ -192,38 +305,79 @@ const insertParagraph = async (
       // Determine block type based on markdown syntax
       const { type, content } = getBlockType(paragraphText)
       
-      // Calculate the actual length of the text for the attribs field
-      const textLength = content.length.toString(36) // Convert to hex
-      
-      // Define new block for this paragraph
-      changeMap[blockId] = {
-        id: blockId,
-        version: 0,
-        payload: {
-          ops: [{
-            p: [],
-            action: {
-              oi: {
-                type: type,
-                children: [],
-                comments: [],
-                revisions: [],
-                author: author,
-                text: {
-                  initialAttributedTexts: {
-                    text: { '0': content },
-                    attribs: { '0': `*0+${textLength}` } // Use actual text length in hex
+      // For headings, we use simple formatting
+      if (type !== 'text') {
+        // Calculate the actual length of the text for the attribs field
+        const textLength = content.length.toString(36)
+        
+        // Define new block for this heading paragraph
+        changeMap[blockId] = {
+          id: blockId,
+          version: 0,
+          payload: {
+            ops: [{
+              p: [],
+              action: {
+                oi: {
+                  type: type,
+                  children: [],
+                  comments: [],
+                  revisions: [],
+                  author: author,
+                  text: {
+                    initialAttributedTexts: {
+                      text: { '0': content },
+                      attribs: { '0': `*0+${textLength}` }
+                    },
+                    apool: {
+                      numToAttrib: { '0': ['author', author] },
+                      nextNum: 1
+                    }
                   },
-                  apool: {
-                    numToAttrib: { '0': ['author', author] },
-                    nextNum: 1
-                  }
-                },
-                folded: false,
-                parent_id: targetBlockId
+                  folded: false,
+                  parent_id: targetBlockId
+                }
               }
-            }
-          }]
+            }]
+          }
+        }
+      } else {
+        // Parse content for Markdown formatting (bold, italic, strikethrough)
+        const parsed = parseMarkdownFormatting(content)
+        
+        // Build numToAttrib from parsed formatting types
+        const numToAttrib: Record<string, [string, string]> = { ...parsed.formatTypes }
+        
+        // Define new block for this formatted text paragraph
+        changeMap[blockId] = {
+          id: blockId,
+          version: 0,
+          payload: {
+            ops: [{
+              p: [],
+              action: {
+                oi: {
+                  type: 'text',
+                  children: [],
+                  comments: [],
+                  revisions: [],
+                  author: author,
+                  text: {
+                    initialAttributedTexts: {
+                      text: { '0': parsed.text },
+                      attribs: { '0': parsed.attribs }
+                    },
+                    apool: {
+                      numToAttrib: numToAttrib,
+                      nextNum: Object.keys(numToAttrib).length
+                    }
+                  },
+                  folded: false,
+                  parent_id: targetBlockId
+                }
+              }
+            }]
+          }
         }
       }
     })
