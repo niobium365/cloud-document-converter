@@ -31,3 +31,18 @@ if (downloadButton) {
     handleDownload().catch(console.error)
   })
 }
+
+const optimizeButton: HTMLElement | null = document.getElementById(
+  'optimize_docx',
+)
+if (optimizeButton) {
+  const handleOptimize = async () => {
+    await chrome.runtime.sendMessage({ flag: 'optimize_docx' })
+
+    window.close()
+  }
+
+  optimizeButton.addEventListener('click', () => {
+    handleOptimize().catch(console.error)
+  })
+}
