@@ -46,3 +46,65 @@ if (optimizeButton) {
     handleOptimize().catch(console.error)
   })
 }
+
+const pasteMarkdownButton: HTMLElement | null = document.getElementById(
+  'paste_markdown',
+)
+if (pasteMarkdownButton) {
+  const handlePasteMarkdown = async (): Promise<void> => {
+    // Open a separate window for markdown input instead of a modal
+    // This allows for a larger input area not constrained by popup size
+    
+    // Create a new window with specified dimensions
+    const inputWindow = await chrome.windows.create({
+      url: chrome.runtime.getURL('markdown-input.html'),
+      type: 'popup',
+      width: 800,
+      height: 600,
+      focused: true
+    })
+    
+    // Store the window ID to track it
+    const windowId = inputWindow?.id
+    if (!windowId) {
+      console.error('Failed to create markdown input window')
+      return
+    }
+    
+    // Set up a listener for messages from the input window
+    const messageListener = (message: any, sender: chrome.runtime.MessageSender, sendResponse: () => void): boolean => {
+      if (message.flag === 'markdown_submitted' && message.markdownText) {
+        // Send markdown text to background
+        chrome.runtime.sendMessage({ 
+          flag: 'paste_markdown',
+          markdownText: message.markdownText
+        })
+        
+        // Clean up and close the popup
+        chrome.runtime.onMessage.removeListener(messageListener)
+        window.close()
+      } else if (message.flag === 'markdown_cancelled') {
+        // Just clean up if cancelled
+        chrome.runtime.onMessage.removeListener(messageListener)
+      }
+      return true // Required for async response handling
+    }
+    
+    // Add the listener
+    chrome.runtime.onMessage.addListener(messageListener)
+    
+    // Also set up a listener for when the window is closed
+    const windowRemovedListener = (removedWindowId: number): void => {
+      if (removedWindowId === windowId) {
+        chrome.runtime.onMessage.removeListener(messageListener)
+      }
+    }
+    
+    // Add window closed listener
+    chrome.windows.onRemoved.addListener(windowRemovedListener)
+  }
+
+  pasteMarkdownButton.addEventListener('click', () => {
+    handlePasteMarkdown().catch(console.error)
+  })
+}

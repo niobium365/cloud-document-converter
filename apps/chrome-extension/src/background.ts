@@ -4,6 +4,7 @@ enum MenuItemId {
   DOWNLOAD_DOCX_AS_MARKDOWN = 'download_docx_as_markdown',
   COPY_DOCX_AS_MARKDOWN = 'copy_docx_as_markdown',
   OPTIMIZE_DOCX = 'optimize_docx',
+  PASTE_MARKDOWN = 'paste_markdown',
 }
 
 // Capture member_id from early network traffic (user_change / room/watch)
@@ -200,6 +201,46 @@ const executeScriptByFlag = async (flag: string | number, tabId: number) => {
         world: 'MAIN',
       })
       break
+    case MenuItemId.PASTE_MARKDOWN:
+      // Extract markdown text if provided in message
+      let markdownText: string | undefined;
+      if (typeof flag === 'object' && flag && 'markdownText' in flag) {
+        markdownText = (flag as any).markdownText;
+      }
+      
+      // First, set the markdown content in a separate script injection
+      if (markdownText) {
+        await chrome.scripting.executeScript({
+          func: () => {
+            const content = `${markdownText}`;
+            try { window.localStorage.setItem('cdc_markdown_content', content); } catch {}
+          },
+          target: { tabId },
+        });
+      }
+      
+      // Now inject the auth tokens as before
+      await chrome.scripting.executeScript({
+        func: () => {
+          chrome.storage.local.get(['earlyMemberId','csrfToken'], (res: any) => {
+            const mid = res.earlyMemberId;
+            if (mid) {
+              try { window.localStorage.setItem('cdc_early_member_id', String(mid)); } catch {}
+            }
+            const csrf = res.csrfToken;
+            if (csrf) {
+              try { window.localStorage.setItem('cdc_csrf_token', String(csrf)); } catch {}
+            }
+          });
+        },
+        target: { tabId },
+      })
+      await chrome.scripting.executeScript({
+        files: ['bundles/scripts/paste-markdown.js'],
+        target: { tabId },
+        world: 'MAIN',
+      })
+      break
     default:
       break
   }
@@ -212,22 +253,44 @@ chrome.contextMenus.onClicked.addListener(({ menuItemId }, tab) => {
 })
 
 chrome.runtime.onMessage.addListener((_message, sender, sendResponse) => {
-  const message = _message as Message
+  const msg = _message as { flag: string; markdownText?: string }
 
-  const executeScript = async () => {
-    const activeTabs = await chrome.tabs.query({
-      currentWindow: true,
-      active: true,
-    })
+  const handleMessage = async () => {
+    const activeTabs = await chrome.tabs.query({ currentWindow: true, active: true })
+    const tabId = activeTabs.at(0)?.id
+    if (!tabId) return
 
-    const activeTabId = activeTabs.at(0)?.id
-
-    if (activeTabs.length === 1 && activeTabId !== undefined) {
-      await executeScriptByFlag(message.flag, activeTabId)
+    if (msg.flag === MenuItemId.PASTE_MARKDOWN) {
+      // Inject markdown content into page localStorage
+      if (msg.markdownText) {
+        // @ts-ignore chrome.scripting.executeScript args are supported at runtime
+        await chrome.scripting.executeScript({
+          // @ts-ignore chrome.scripting.executeScript func signature mismatch
+          func: (content: string) => {
+            try { window.localStorage.setItem('cdc_markdown_content', content) } catch {}
+          },
+          args: [msg.markdownText],
+          target: { tabId },
+        })
+      }
+      // Inject auth tokens
+      await chrome.scripting.executeScript({
+        func: () => {
+          chrome.storage.local.get(['earlyMemberId','csrfToken'], (res: any) => {
+            if (res.earlyMemberId) try { window.localStorage.setItem('cdc_early_member_id', String(res.earlyMemberId)) } catch {}
+            if (res.csrfToken) try { window.localStorage.setItem('cdc_csrf_token', String(res.csrfToken)) } catch {}
+          })
+        },
+        target: { tabId },
+      })
+      // Execute content script
+      await chrome.scripting.executeScript({ files: ['bundles/scripts/paste-markdown.js'], target: { tabId }, world: 'MAIN' })
+    } else {
+      // Handle other flags via context menu logic
+      await executeScriptByFlag(msg.flag, tabId)
     }
   }
 
-  executeScript().then(sendResponse).catch(console.error)
-
+  handleMessage().then(sendResponse).catch(console.error)
   return true
 })

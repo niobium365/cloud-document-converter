@@ -36,6 +36,14 @@
       <button id="optimize_docx" data-locale="optimize_docx">Optimize Markdown</button>
     </li>
     <li>
+      <svg aria-hidden="true" focusable="false" role="img" class="octicon octicon-paste" viewBox="0 0 16 16"
+        width="16" height="16" fill="currentColor">
+        <path d="M10.121 8.46v1.68c0 .408-.333.74-.739.74H6.8v1.377c0 .286-.345.425-.548.223l-2.46-2.46a.318.318 0 0 1 0-.447l2.46-2.46c.2-.2.547-.062.547.222V8.66h2.585c.403 0 .737.333.737.74ZM9.25 11.22c0-.163-.147-.297-.328-.297h-.09a.977.977 0 0 0 .012-.125v-1.681a1.023 1.023 0 0 0-1.022-1.022H5.375V6.858a.319.319 0 0 0-.319-.318.318.318 0 0 0-.224.092l-2.46 2.46a.318.318 0 0 0 0 .448l2.46 2.46a.318.318 0 0 0 .32-.014c.086-.088.139-.208.139-.32v-.814h3.25a.32.32 0 0 1 .32.319v.073a.302.302 0 0 0 .302.302.287.287 0 0 0 .087-.333Z"></path>
+        <path d="M4.5 1a1 1 0 0 0-1 1v3h.293c.228 0 .44.114.585.293l.854 1.274A1.79 1.79 0 0 0 6.736 7H8.5V5.5A1.5 1.5 0 0 1 10 4h.5V2a1 1 0 0 0-1-1h-5Zm0 1h5v2H8.5A1.5 1.5 0 0 0 7 5.5V6H6.736a.79.79 0 0 1-.66-.348l-.853-1.274A1.606 1.606 0 0 0 3.793 3.5H3.5V2Zm7.25.75a.75.75 0 0 1 .75.75v3.75h-1.5a1.5 1.5 0 0 0-1.5 1.5v1.5h-4.5a.75.75 0 0 1-.75-.75V6.751h1.04c.534.001 1.033-.277 1.31-.739l.841-1.252A.735.735 0 0 1 7.957 4.5h3.793ZM2.25 6a.75.75 0 0 0-.75.75v7.5c0 .414.336.75.75.75h7.5a.75.75 0 0 0 .75-.75v-4.5a.75.75 0 0 0-.75-.75h-2.25v-1.5a.75.75 0 0 0-.75-.75h-4.5Z"></path>
+      </svg>
+      <button id="paste_markdown" data-locale="paste_markdown">Paste from Markdown</button>
+    </li>
+    <li>
       <svg aria-hidden="true" focusable="false" role="img" class="octicon octicon-issue-opened" viewBox="0 0 16 16"
         width="16" height="16" fill="currentColor">
         <path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path>
@@ -45,10 +53,30 @@
         data-locale="help_and_feedback">Help and Feedback</a>
     </li>
   </ul>
+  <!-- Modal for markdown input -->
+  <div id="markdown-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Paste Markdown Content</h2>
+        <span class="close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <textarea id="markdown-textarea" placeholder="Paste your markdown content here..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="markdown-cancel">Cancel</button>
+        <button id="markdown-submit">Insert</button>
+      </div>
+    </div>
+  </div>
+
   <style>
     :root {
       --background-primary: #ffffff;
       --text-primary: rgb(31, 31, 31);
+      --border-color: #ddd;
+      --button-primary: #0366d6;
+      --button-hover: #0256b9;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -79,6 +107,100 @@
       background-color: var(--background-primary);
       font-size: 16px;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+      background-color: var(--background-primary);
+      color: var(--text-primary);
+      margin: 10% auto;
+      padding: 0;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      width: 500px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .modal-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .close {
+      color: var(--text-primary);
+      float: right;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    
+    .modal-body {
+      padding: 16px;
+    }
+    
+    #markdown-textarea {
+      width: 100%;
+      height: 200px;
+      padding: 8px;
+      box-sizing: border-box;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      resize: vertical;
+      font-family: monospace;
+      font-size: 14px;
+      background-color: var(--background-primary);
+      color: var(--text-primary);
+    }
+    
+    .modal-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    
+    .modal-footer button {
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    
+    #markdown-cancel {
+      background-color: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+    
+    #markdown-submit {
+      background-color: var(--button-primary);
+      border: 1px solid transparent;
+      color: white;
+    }
+    
+    #markdown-submit:hover {
+      background-color: var(--button-hover);
     }
 
     ul {

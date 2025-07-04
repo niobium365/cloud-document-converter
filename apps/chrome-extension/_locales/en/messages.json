@@ -8,6 +8,9 @@
   "optimize_docx": {
     "message": "Optimize Markdown"
   },
+  "paste_markdown": {
+    "message": "Paste from Markdown"
+  },
   "help_and_feedback": {
     "message": "Help and Feedback"
   }

@@ -42,5 +42,11 @@
     "service_worker": "bundles/background.js",
     "type": "module"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["markdown-input.html", "markdown-input.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "default_locale": "en"
 }
