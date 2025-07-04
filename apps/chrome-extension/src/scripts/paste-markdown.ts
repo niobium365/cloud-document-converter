@@ -107,7 +107,8 @@ const getPageBlockId = async (): Promise<string | null> => {
 }
 
 /**
- * Insert a paragraph into the document
+ * Insert paragraphs into the document
+ * Handles multi-line text by creating separate paragraph blocks
  */
 const insertParagraph = async (
   pageBlockId: string,
@@ -128,25 +129,37 @@ const insertParagraph = async (
     // Get author from document model
     const author = root.record.snapshot.author || memberId
     
-    // 1. Generate block IDs for new paragraphs
-    const newBlockId = generateId()
+    // Split text by newlines to create multiple paragraphs
+    const paragraphs = text.split(/\r?\n/).filter(p => p.trim().length > 0)
+    if (paragraphs.length === 0) {
+      console.warn('No valid paragraphs to insert')
+      return false
+    }
+    
+    // 1. Generate block IDs for each paragraph
+    const newBlockIds = paragraphs.map(() => generateId())
     
     // Find existing blocks
     const siblings = root.children || []
     // We'll insert at the beginning of the document as suggested
-    const insertPosition = 0
+    const insertPosition = 0 as number
     
     // Target block to modify (parent)
     const targetBlockId = pageBlockId
     
     // Build operations for parent block
-    const parentOps = [
+    const parentOps: Array<{p: (string|number)[], action: {li: string} | {ld: string}}> = [
       // Optional: delete an existing block if needed
       // {p: ['children', insertPosition], action: {ld: siblings[insertPosition]?.id}},
-      
-      // Insert new paragraph
-      {p: ['children', insertPosition], action: {li: newBlockId}}
     ]
+    
+    // Add all paragraph blocks in correct order
+    // We need to add them in reverse order since we're inserting at the same position
+    // This ensures they appear in the correct sequence in the document
+    const reversedIds = newBlockIds.slice().reverse()
+    reversedIds.forEach(blockId => {
+      parentOps.push({p: ['children', insertPosition], action: {li: blockId}})
+    })
     
     // Build change_map
     const changeMap: Record<string, any> = {
@@ -154,26 +167,52 @@ const insertParagraph = async (
         id: targetBlockId,
         version: 1, // Will be updated after dummy op
         payload: { ops: parentOps }
-      },
+      }
+    }
+    
+    // Helper function to determine if text is a heading and what level
+    const getBlockType = (text: string): { type: string, content: string } => {
+      // Check for Markdown headings (###, ##, #)
+      if (text.startsWith('### ')) {
+        return { type: 'heading3', content: text.substring(4) };
+      } else if (text.startsWith('## ')) {
+        return { type: 'heading2', content: text.substring(3) };
+      } else if (text.startsWith('# ')) {
+        return { type: 'heading1', content: text.substring(2) };
+      }
+      return { type: 'text', content: text };
+    };
+    
+    // Add each paragraph block to the change_map
+    // Use the original order of blockIds for the content
+    newBlockIds.forEach((blockId, index) => {
+      // Get the corresponding paragraph text
+      const paragraphText = paragraphs[index]
       
-      // Define new text block
-      [newBlockId]: {
-        id: newBlockId,
+      // Determine block type based on markdown syntax
+      const { type, content } = getBlockType(paragraphText)
+      
+      // Calculate the actual length of the text for the attribs field
+      const textLength = content.length.toString(36) // Convert to hex
+      
+      // Define new block for this paragraph
+      changeMap[blockId] = {
+        id: blockId,
         version: 0,
         payload: {
           ops: [{
             p: [],
             action: {
               oi: {
-                type: 'text',
+                type: type,
                 children: [],
                 comments: [],
                 revisions: [],
                 author: author,
                 text: {
                   initialAttributedTexts: {
-                    text: { '0': text },
-                    attribs: { '0': '*0+k' } // k is length of text, adjust if needed
+                    text: { '0': content },
+                    attribs: { '0': `*0+${textLength}` } // Use actual text length in hex
                   },
                   apool: {
                     numToAttrib: { '0': ['author', author] },
@@ -187,7 +226,7 @@ const insertParagraph = async (
           }]
         }
       }
-    }
+    })
     
     // 2. Stage 1: dummy op to get correct block versions - EXACTLY like optimize-lark-docx.ts
     const dummyChangeMap: Record<string, any> = {}
