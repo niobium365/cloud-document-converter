@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Parse tabId from URL query string
+  const query = new URLSearchParams(window.location.search);
+  const tabIdParam = query.get('tabId');
+  const targetTabId = tabIdParam ? Number(tabIdParam) : undefined;
   const textarea = document.getElementById('markdown-textarea');
   const submitButton = document.getElementById('submit-button');
   const cancelButton = document.getElementById('cancel-button');
@@ -14,10 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Send the markdown text back to the popup
+    // Send the markdown text directly to the background
     chrome.runtime.sendMessage({
-      flag: 'markdown_submitted',
-      markdownText: markdownText
+      flag: 'paste_markdown',
+      markdownText: markdownText,
+      tabId: targetTabId
     }, () => {
       // Give the message time to be received before closing
       setTimeout(() => window.close(), 100);

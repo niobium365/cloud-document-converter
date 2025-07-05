@@ -62,46 +62,20 @@ if (pasteMarkdownButton) {
     // Open a separate window for markdown input instead of a modal
     // This allows for a larger input area not constrained by popup size
     
-    // Create a new window with specified dimensions
-    const inputWindow = await chrome.windows.create({
-      url: chrome.runtime.getURL('markdown-input.html'),
+    // Build URL with tabId so the input window can send message directly to background
+    const inputUrl = `${chrome.runtime.getURL('markdown-input.html')}?tabId=${targetTabId}`
+
+    // Create a new window for markdown input
+    await chrome.windows.create({
+      url: inputUrl,
       type: 'popup',
       width: 800,
       height: 600,
-      focused: true
+      focused: true,
     })
-    
-    // Store the window ID to track it
-    const windowId = inputWindow?.id
-    if (!windowId) {
-      console.error('Failed to create markdown input window')
-      return
-    }
-    
-    // Set up a listener for messages from the input window
-    const messageListener = (message: any, sender: chrome.runtime.MessageSender, sendResponse: () => void): boolean => {
-      if (message.flag === 'markdown_submitted' && message.markdownText) {
-        // Send markdown text to background
-        chrome.runtime.sendMessage({ 
-          flag: 'paste_markdown',
-          markdownText: message.markdownText,
-          tabId: targetTabId
-        })
-        
-        // Clean up and close the popup
-        chrome.runtime.onMessage.removeListener(messageListener)
-        window.close()
-      } else if (message.flag === 'markdown_cancelled') {
-        // Just clean up and close the popup on cancel
-        chrome.runtime.onMessage.removeListener(messageListener)
-        window.close()
-      }
-      return true // Required for async response handling
-    }
-    
-    // Add the listener
-    chrome.runtime.onMessage.addListener(messageListener)
-    
+
+    // Close the extension popup immediately; the input window will handle the rest
+    window.close();
 
   }
 
