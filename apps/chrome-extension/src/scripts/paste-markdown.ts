@@ -57,16 +57,20 @@ const main = async () => {
       try { window.localStorage.removeItem('cdc_markdown_content'); } catch { }
 
       // Insert the text as a new paragraph
-      await insertParagraph(pageBlockId, markdownText, memberId, csrf)
-
-      Toast.success({ content: 'Markdown text inserted successfully!' })
+      const result = await insertParagraph(pageBlockId, markdownText, memberId, csrf)
+      
+      if (result) {
+        Toast.success({ content: 'Markdown text inserted successfully!' })
+      } else {
+        Toast.error({ content: 'Failed to insert markdown content.' })
+      }
     } catch (error) {
       console.error('Clipboard access error:', error)
       Toast.error({ content: 'Failed to access clipboard. Please check permissions.' })
     }
   } catch (error) {
     console.error('Error in paste markdown:', error)
-    Toast.error({ content: 'Failed to paste markdown content.' })
+    Toast.error({ content: `Failed to paste markdown content: ${error instanceof Error ? error.message : 'Unknown error'}` })
   }
 }
 
@@ -298,60 +302,101 @@ const insertParagraph = async (
     const tableHeaderRegex = /^\|(.+)\|$/;
     const tableDividerRegex = /^\|(?:\s*[-:]+\s*\|)+$/;
     
-    // Group paragraphs into sections (tables or regular paragraphs)
-    let sections: {type: 'table' | 'paragraphs', content: string[]}[] = [];
-    let currentSection: string[] = [];
-    let currentType: 'table' | 'paragraphs' | null = null;
+    // Group paragraphs into sections (tables, code blocks or regular paragraphs)
+  let sections: {type: 'table' | 'paragraphs' | 'code', content: string[], language?: string}[] = [];
+  let currentSection: string[] = [];
+  let currentType: 'table' | 'paragraphs' | 'code' | null = null;
+  let codeLanguage: string | undefined = undefined;
     
     // Helper function to determine if lines form a table
-    const isTableStart = (idx: number) => {
-      return idx < paragraphs.length - 1 && 
-             tableHeaderRegex.test(paragraphs[idx].trim()) && 
-             tableDividerRegex.test(paragraphs[idx + 1].trim());
-    };
+  const isTableStart = (idx: number) => {
+    return idx < paragraphs.length - 1 && 
+           tableHeaderRegex.test(paragraphs[idx].trim()) && 
+           tableDividerRegex.test(paragraphs[idx + 1].trim());
+  };
+  
+  // Helper function to determine if a line is a code fence start
+  const isCodeFenceStart = (line: string) => {
+    const match = line.match(/^```(\w*)/);
+    return match !== null ? match[1] || 'plain' : null;
+  };
+  
+  // Helper function to determine if a line is a code fence end
+  const isCodeFenceEnd = (line: string) => {
+    return line.trim() === '```';
+  };
     
-    // Group paragraphs into table and non-table sections
-    for (let i = 0; i < paragraphs.length; i++) {
-      if (isTableStart(i)) {
-        // If we were collecting non-table paragraphs, save them
-        if (currentType === 'paragraphs' && currentSection.length > 0) {
-          sections.push({type: 'paragraphs', content: [...currentSection]});
-          currentSection = [];
-        }
-        
-        // Start collecting a table
-        currentType = 'table';
-        currentSection = [paragraphs[i], paragraphs[i+1]];
-        i += 2; // Skip the header and divider
-        
-        // Collect table body rows
-        while (i < paragraphs.length && tableHeaderRegex.test(paragraphs[i].trim())) {
-          currentSection.push(paragraphs[i]);
-          i++;
-        }
-        i--; // Adjust for the loop increment
-        
-        // Save the table section
-        sections.push({type: 'table', content: [...currentSection]});
+    // Group paragraphs into table, code block, and regular paragraph sections
+  for (let i = 0; i < paragraphs.length; i++) {
+    const currentLine = paragraphs[i].trim();
+    const codeLang = isCodeFenceStart(currentLine);
+    
+    if (codeLang) {
+      // Found code fence start - finish any current section
+      if (currentType && currentSection.length > 0) {
+        sections.push({type: currentType, content: [...currentSection], language: codeLanguage});
         currentSection = [];
-        currentType = null;
-      } else {
-        // If we're starting a new non-table section
-        if (currentType !== 'paragraphs') {
-          if (currentSection.length > 0) {
-            sections.push({type: currentType || 'paragraphs', content: [...currentSection]});
-            currentSection = [];
-          }
-          currentType = 'paragraphs';
-        }
-        currentSection.push(paragraphs[i]);
       }
+      
+      // Start a new code section
+      currentType = 'code';
+      codeLanguage = codeLang;
+      
+      // Collect code content until ending fence
+      const codeContent: string[] = [];
+      i++; // Skip the fence line
+      
+      while (i < paragraphs.length && !isCodeFenceEnd(paragraphs[i].trim())) {
+        codeContent.push(paragraphs[i]);
+        i++;
+      }
+      
+      // Save code section
+      sections.push({type: 'code', content: codeContent, language: codeLanguage});
+      codeLanguage = undefined;
+      currentType = null;
+      currentSection = [];
+    } else if (isTableStart(i)) {
+      // If we were collecting non-table paragraphs, save them
+      if (currentType && currentSection.length > 0) {
+        sections.push({type: currentType, content: [...currentSection], language: codeLanguage});
+        currentSection = [];
+      }
+      
+      // Start collecting a table
+      currentType = 'table';
+      currentSection = [paragraphs[i], paragraphs[i+1]];
+      i += 2; // Skip the header and divider
+      
+      // Collect table body rows
+      while (i < paragraphs.length && tableHeaderRegex.test(paragraphs[i].trim())) {
+        currentSection.push(paragraphs[i]);
+        i++;
+      }
+      i--; // Adjust for the loop increment
+      
+      // Save the table section
+      sections.push({type: 'table', content: [...currentSection]});
+      currentSection = [];
+      currentType = null;
+    } else {
+      // If we're starting a new regular paragraph section
+      if (currentType !== 'paragraphs') {
+        if (currentSection.length > 0) {
+          sections.push({type: currentType || 'paragraphs', content: [...currentSection], language: codeLanguage});
+          currentSection = [];
+          codeLanguage = undefined;
+        }
+        currentType = 'paragraphs';
+      }
+      currentSection.push(paragraphs[i]);
     }
+  }
     
     // Add any remaining section
-    if (currentSection.length > 0) {
-      sections.push({type: currentType || 'paragraphs', content: [...currentSection]});
-    }
+  if (currentSection.length > 0) {
+    sections.push({type: currentType || 'paragraphs', content: [...currentSection], language: codeLanguage});
+  }
     
     // If there's only one section and it's a table, use the existing table code
     if (sections.length === 1 && sections[0].type === 'table') {
@@ -518,7 +563,59 @@ const insertParagraph = async (
       
       // Process each section
       sections.forEach((section, sectionIndex) => {
-        if (section.type === 'table') {
+        if (section.type === 'code') {
+          // Process code block section
+          const codeContent = section.content.join('\n');
+          
+          // Generate block ID for the code block
+          const codeBlockId = generateId();
+          rootBlockIds.push(codeBlockId);
+          
+          // Create code block in change map
+          changeMap[codeBlockId] = {
+            id: codeBlockId,
+            version: 0,
+            payload: {
+              ops: [{
+                p: [],
+                action: {
+                  oi: {
+                    type: "code",
+                    children: [],
+                    comments: [],
+                    revisions: [],
+                    author: author,
+                    text: {
+                      initialAttributedTexts: {
+                        text: { '0': codeContent },
+                        attribs: { '0': `*0|${codeContent.split('\n').length - 1}+${codeContent.length.toString(36)}` }
+                      },
+                      apool: {
+                        numToAttrib: { '0': ['author', author] },
+                        nextNum: 1
+                      }
+                    },
+                    language: section.language,
+                    wrap: false,
+                    caption: {
+                      text: {
+                        initialAttributedTexts: {
+                          text: { '0': '\n' },
+                          attribs: { '0': '|1+1' }
+                        },
+                        apool: {
+                          numToAttrib: {},
+                          nextNum: 0
+                        }
+                      }
+                    },
+                    parent_id: pageBlockId
+                  }
+                }
+              }]
+            }
+          };
+        } else if (section.type === 'table') {
           // Process table section
           const tableParagraphs = section.content;
           const headerCells = tableParagraphs[0].trim().slice(1, -1).split('|').map(c => c.trim());
