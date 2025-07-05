@@ -277,7 +277,7 @@ const insertParagraph = async (
           let isFormatted = false;
           for (let i = 0; i < parts.length; i++) {
             const part = parts[i];
-            if (part === '') continue;
+            if (part === '') { isFormatted = !isFormatted; continue; }
             
             if (isFormatted) {
               newSegments.push({
