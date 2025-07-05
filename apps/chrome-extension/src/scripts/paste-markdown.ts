@@ -573,7 +573,7 @@ const insertParagraph = async (
     }
     
     // Handle mixed content with multiple sections
-    if (sections.length > 1) {
+    if (sections.length > 0) {
       // Combined change map for all sections
       let changeMap: Record<string, any> = {};
       
