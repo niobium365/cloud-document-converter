@@ -303,7 +303,7 @@ const insertParagraph = async (
     const tableDividerRegex = /^\|(?:\s*[-:]+\s*\|)+$/;
     
     // Group paragraphs into sections (tables, code blocks or regular paragraphs)
-  let sections: {type: 'table' | 'paragraphs' | 'code', content: string[], language?: string}[] = [];
+  let sections: {type: 'table' | 'paragraphs' | 'code' | 'hr', content: string[], language?: string}[] = [];
   let currentSection: string[] = [];
   let currentType: 'table' | 'paragraphs' | 'code' | null = null;
   let codeLanguage: string | undefined = undefined;
@@ -317,13 +317,19 @@ const insertParagraph = async (
   
   // Helper function to determine if a line is a code fence start
   const isCodeFenceStart = (line: string) => {
-    const match = line.match(/^```(\w*)/);
+    const match = line.match(/^```(\w*)/);  
     return match !== null ? match[1] || 'plain' : null;
   };
   
   // Helper function to determine if a line is a code fence end
   const isCodeFenceEnd = (line: string) => {
-    return line.trim() === '```';
+    return line.trim().startsWith('```');
+  };
+  
+  // Helper function to determine if a line is a horizontal rule
+  const isHorizontalRule = (line: string) => {
+    const trimmedLine = line.trim();
+    return (/^-{3,}$/.test(trimmedLine) || /^\*{3,}$/.test(trimmedLine) || /^_{3,}$/.test(trimmedLine));
   };
     
     // Group paragraphs into table, code block, and regular paragraph sections
@@ -331,7 +337,17 @@ const insertParagraph = async (
     const currentLine = paragraphs[i].trim();
     const codeLang = isCodeFenceStart(currentLine);
     
-    if (codeLang) {
+    if (isHorizontalRule(currentLine)) {
+      // Found horizontal rule - finish any current section
+      if (currentType && currentSection.length > 0) {
+        sections.push({type: currentType, content: [...currentSection], language: codeLanguage});
+        currentSection = [];
+      }
+      
+      // Add a horizontal rule section
+      sections.push({type: 'hr', content: [], language: undefined});
+      currentType = null;
+    } else if (codeLang) {
       // Found code fence start - finish any current section
       if (currentType && currentSection.length > 0) {
         sections.push({type: currentType, content: [...currentSection], language: codeLanguage});
@@ -350,6 +366,12 @@ const insertParagraph = async (
         codeContent.push(paragraphs[i]);
         i++;
       }
+      
+      // Handle the closing fence (skip it if we found it)
+      if (i < paragraphs.length && isCodeFenceEnd(paragraphs[i].trim())) {
+        i++; // Skip the closing fence
+      }
+      i--; // Adjust for the outer loop increment
       
       // Save code section
       sections.push({type: 'code', content: codeContent, language: codeLanguage});
@@ -607,6 +629,41 @@ const insertParagraph = async (
                           numToAttrib: {},
                           nextNum: 0
                         }
+                      }
+                    },
+                    parent_id: pageBlockId
+                  }
+                }
+              }]
+            }
+          };
+        } else if (section.type === 'hr') {
+          // Process horizontal rule section
+          const hrBlockId = generateId();
+          rootBlockIds.push(hrBlockId);
+          
+          // Create divider block in change map
+          changeMap[hrBlockId] = {
+            id: hrBlockId,
+            version: 0,
+            payload: {
+              ops: [{
+                p: [],
+                action: {
+                  oi: {
+                    type: "divider",
+                    children: [],
+                    comments: [],
+                    revisions: [],
+                    author: author,
+                    text: {
+                      initialAttributedTexts: {
+                        text: {"0": ""},
+                        attribs: {"0": ""}
+                      },
+                      apool: {
+                        numToAttrib: {},
+                        nextNum: 0
                       }
                     },
                     parent_id: pageBlockId
