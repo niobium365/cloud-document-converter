@@ -610,7 +610,7 @@ const insertParagraph = async (
                     text: {
                       initialAttributedTexts: {
                         text: { '0': codeContent },
-                        attribs: { '0': `*0|${codeContent.split('\n').length - 1}+${codeContent.length.toString(36)}` }
+                        attribs: { '0': `*0|${(codeContent.split('\n').length - 1).toString(36)}+${codeContent.length.toString(36)}` }
                       },
                       apool: {
                         numToAttrib: { '0': ['author', author] },
