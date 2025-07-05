@@ -52,6 +52,13 @@ const pasteMarkdownButton: HTMLElement | null = document.getElementById(
 )
 if (pasteMarkdownButton) {
   const handlePasteMarkdown = async (): Promise<void> => {
+    // Capture the active Lark tab ID
+    const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true, windowType: 'normal' });
+    const targetTabId = activeTab?.id;
+    if (!targetTabId) {
+      console.error('Cannot find target Lark tab');
+      return;
+    }
     // Open a separate window for markdown input instead of a modal
     // This allows for a larger input area not constrained by popup size
     
@@ -77,15 +84,17 @@ if (pasteMarkdownButton) {
         // Send markdown text to background
         chrome.runtime.sendMessage({ 
           flag: 'paste_markdown',
-          markdownText: message.markdownText
+          markdownText: message.markdownText,
+          tabId: targetTabId
         })
         
         // Clean up and close the popup
         chrome.runtime.onMessage.removeListener(messageListener)
         window.close()
       } else if (message.flag === 'markdown_cancelled') {
-        // Just clean up if cancelled
+        // Just clean up and close the popup on cancel
         chrome.runtime.onMessage.removeListener(messageListener)
+        window.close()
       }
       return true // Required for async response handling
     }
@@ -93,15 +102,7 @@ if (pasteMarkdownButton) {
     // Add the listener
     chrome.runtime.onMessage.addListener(messageListener)
     
-    // Also set up a listener for when the window is closed
-    const windowRemovedListener = (removedWindowId: number): void => {
-      if (removedWindowId === windowId) {
-        chrome.runtime.onMessage.removeListener(messageListener)
-      }
-    }
-    
-    // Add window closed listener
-    chrome.windows.onRemoved.addListener(windowRemovedListener)
+
   }
 
   pasteMarkdownButton.addEventListener('click', () => {

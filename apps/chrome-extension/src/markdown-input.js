@@ -18,18 +18,20 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.sendMessage({
       flag: 'markdown_submitted',
       markdownText: markdownText
+    }, () => {
+      // Give the message time to be received before closing
+      setTimeout(() => window.close(), 100);
     });
-
-    // Close this window
-    window.close();
   });
 
   // Handle cancel button click
   cancelButton.addEventListener('click', () => {
     chrome.runtime.sendMessage({
       flag: 'markdown_cancelled'
+    }, () => {
+      // Give the message time to be received before closing
+      setTimeout(() => window.close(), 100);
     });
-    window.close();
   });
 
   // Handle keyboard shortcuts

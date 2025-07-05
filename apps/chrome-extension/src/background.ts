@@ -256,9 +256,12 @@ chrome.runtime.onMessage.addListener((_message, sender, sendResponse) => {
   const msg = _message as { flag: string; markdownText?: string }
 
   const handleMessage = async () => {
-    const activeTabs = await chrome.tabs.query({ currentWindow: true, active: true })
-    const tabId = activeTabs.at(0)?.id
-    if (!tabId) return
+    let tabId = (msg as any).tabId as number | undefined;
+    if (!tabId) {
+      const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      tabId = tabs[0]?.id;
+    }
+    if (!tabId) return;
 
     if (msg.flag === MenuItemId.PASTE_MARKDOWN) {
       // Inject markdown content into page localStorage
