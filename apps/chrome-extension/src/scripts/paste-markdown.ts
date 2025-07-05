@@ -261,7 +261,7 @@ const insertParagraph = async (
         let newSegments: TextSegment[] = [];
         
         for (const segment of segments) {
-          if (segment.formats.includes(type as FormattingType)) {
+          if (segment.formats.includes(type as FormattingType) || (type === 'italic' && segment.formats.includes('bold'))) {
             // Already has this format, keep as is
             newSegments.push(segment);
             continue;
