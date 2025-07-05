@@ -139,20 +139,32 @@ const insertParagraph = async (
     // 1. Generate block IDs for each paragraph
     const newBlockIds = paragraphs.map(() => generateId())
 
-    // Compute indent levels for nested list items
-    const indentLevels = paragraphs.map(line => Math.floor((line.match(/^\s*/)?.[0].length || 0) / 4))
+    // Compute indent levels for nested list items (4 spaces per indent level)
+    const indentLevels = paragraphs.map(line =>
+      Math.floor((line.match(/^\s*/)?.[0].length || 0) / 4)
+    )
 
-    // Map each parent blockId to its nested child blockIds
-    const parentToChildren: Record<string, string[]> = {}
-    let lastParentId: string | null = null
-    newBlockIds.forEach((blockId, idx) => {
-      const indent = indentLevels[idx]
-      if (indent === 0) {
-        lastParentId = blockId
-      } else if (lastParentId) {
-        if (!parentToChildren[lastParentId]) parentToChildren[lastParentId] = []
-        parentToChildren[lastParentId].push(blockId)
+    // Build nodes map and construct nesting via stack algorithm
+    interface Node { id: string; indent: number; children: string[]; parentId?: string }
+    const nodes: Record<string, Node> = {}
+    newBlockIds.forEach((id, idx) => {
+      nodes[id] = { id, indent: indentLevels[idx], children: [] }
+    })
+    const roots: string[] = []
+    const stack: Node[] = []
+    newBlockIds.forEach(id => {
+      const node = nodes[id]
+      // Pop until we find a shallower indent
+      while (stack.length && stack[stack.length - 1].indent >= node.indent) {
+        stack.pop()
       }
+      if (!stack.length) {
+        roots.push(id)
+      } else {
+        node.parentId = stack[stack.length - 1].id
+        stack[stack.length - 1].children.push(id)
+      }
+      stack.push(node)
     })
     
     // Find existing blocks
@@ -163,20 +175,11 @@ const insertParagraph = async (
     // Target block to modify (parent)
     const targetBlockId = pageBlockId
     
-    // Build operations for parent block
-    const parentOps: Array<{p: (string|number)[], action: {li: string} | {ld: string}}> = [
-      // Optional: delete an existing block if needed
-      // {p: ['children', insertPosition], action: {ld: siblings[insertPosition]?.id}},
-    ]
-    
-    // Add all paragraph blocks in correct order
-    // We need to add them in reverse order since we're inserting at the same position
-    // This ensures they appear in the correct sequence in the document
-    // Insert only root list items (indentLevel === 0)
-    const rootIds = newBlockIds.filter((_, idx) => indentLevels[idx] === 0)
-    const reversedRootIds = rootIds.slice().reverse()
-    reversedRootIds.forEach(blockId => {
-      parentOps.push({p: ['children', insertPosition], action: {li: blockId}})
+    // Build operations for parent block (page) using top-level roots
+    const parentOps: Array<{p: (string|number)[], action: {li: string} | {ld: string}}> = []
+    // Insert root-level items in reverse so order is preserved
+    roots.slice().reverse().forEach(rootId => {
+      parentOps.push({ p: ['children', insertPosition], action: { li: rootId } })
     })
     
     // Build change_map
@@ -350,7 +353,7 @@ const insertParagraph = async (
               action: {
                 oi: {
                   type: type,
-                  children: parentToChildren[blockId] || [],
+                  children: nodes[blockId].children || [],
                   comments: [],
                   revisions: [],
                   author: author,
@@ -365,7 +368,7 @@ const insertParagraph = async (
                     }
                   },
                   folded: false,
-                  parent_id: Object.entries(parentToChildren).find(([pid, children]) => children.includes(blockId))?.[0] || targetBlockId
+                  parent_id: nodes[blockId].parentId || targetBlockId
                 }
               }
             }]
@@ -402,7 +405,7 @@ const insertParagraph = async (
               action: {
                 oi: {
                   type: type,
-                  children: parentToChildren[blockId] || [],
+                  children: nodes[blockId].children || [],
                   comments: [],
                   revisions: [],
                   author: author,
@@ -419,7 +422,7 @@ const insertParagraph = async (
                   level: 1,
                   folded: false,
                   ...(seqValue ? { seq: seqValue } : {}),
-                  parent_id: Object.entries(parentToChildren).find(([pid, children]) => children.includes(blockId))?.[0] || targetBlockId
+                  parent_id: nodes[blockId].parentId || targetBlockId
                 }
               }
             }]
@@ -443,7 +446,7 @@ const insertParagraph = async (
               action: {
                 oi: {
                   type: 'text',
-                  children: parentToChildren[blockId] || [],
+                  children: nodes[blockId].children || [],
                   comments: [],
                   revisions: [],
                   author: author,
@@ -458,7 +461,7 @@ const insertParagraph = async (
                     }
                   },
                   folded: false,
-                  parent_id: Object.entries(parentToChildren).find(([pid, children]) => children.includes(blockId))?.[0] || targetBlockId
+                  parent_id: nodes[blockId].parentId || targetBlockId
                 }
               }
             }]
