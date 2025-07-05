@@ -170,9 +170,9 @@ const insertParagraph = async (
       }
     }
     
-    // Helper function to determine if text is a heading and what level
+    // Helper function to determine block type based on Markdown syntax
     const getBlockType = (text: string): { type: string, content: string } => {
-      // Check for Markdown headings (###, ##, #)
+      // Headings
       if (text.startsWith('### ')) {
         return { type: 'heading3', content: text.substring(4) };
       } else if (text.startsWith('## ')) {
@@ -180,6 +180,17 @@ const insertParagraph = async (
       } else if (text.startsWith('# ')) {
         return { type: 'heading1', content: text.substring(2) };
       }
+      // Ordered list: "1. text" or "123. text"
+      const orderedMatch = text.match(/^\s*(\d+)\.\s+(.*)$/);
+      if (orderedMatch) {
+        return { type: 'ordered', content: orderedMatch[2] };
+      }
+      // Bullet list: "* text" or "- text" or "+ text"
+      const bulletMatch = text.match(/^\s*([*\-+])\s+(.*)$/);
+      if (bulletMatch) {
+        return { type: 'bullet', content: bulletMatch[2] };
+      }
+      // Normal paragraph
       return { type: 'text', content: text };
     };
     
@@ -296,6 +307,8 @@ const insertParagraph = async (
       return result;
     };
     
+    // Variables to manage ordered list numbering
+    let inOrderedList = false;
     // Add each paragraph block to the change_map
     // Use the original order of blockIds for the content
     newBlockIds.forEach((blockId, index) => {
@@ -305,8 +318,7 @@ const insertParagraph = async (
       // Determine block type based on markdown syntax
       const { type, content } = getBlockType(paragraphText)
       
-      // For headings, we use simple formatting
-      if (type !== 'text') {
+      if (type === 'heading1' || type === 'heading2' || type === 'heading3') {
         // Calculate the actual length of the text for the attribs field
         const textLength = content.length.toString(36)
         
@@ -341,6 +353,61 @@ const insertParagraph = async (
             }]
           }
         }
+      } else if (type === 'ordered' || type === 'bullet') {
+        // Detect if entering or exiting ordered list to reset numbering
+        if (type === 'ordered') {
+          if (!inOrderedList) {
+            inOrderedList = true;
+          }
+        } else {
+          inOrderedList = false; // bullets don't affect ordered list numbering
+        }
+
+        // Parse inline formatting
+        const parsed = parseMarkdownFormatting(content);
+        const numToAttrib: Record<string, [string, string]> = { ...parsed.formatTypes };
+
+        // Determine seq for ordered list items
+        let seqValue: string | undefined;
+        if (type === 'ordered') {
+          seqValue = inOrderedList ? 'auto' : '1';
+          // After first item, subsequent ordered items should use 'auto'
+          inOrderedList = true;
+        }
+
+        changeMap[blockId] = {
+          id: blockId,
+          version: 0,
+          payload: {
+            ops: [{
+              p: [],
+              action: {
+                oi: {
+                  type: type,
+                  children: [],
+                  comments: [],
+                  revisions: [],
+                  author: author,
+                  text: {
+                    initialAttributedTexts: {
+                      text: { '0': parsed.text },
+                      attribs: { '0': parsed.attribs }
+                    },
+                    apool: {
+                      numToAttrib: numToAttrib,
+                      nextNum: Object.keys(numToAttrib).length
+                    }
+                  },
+                  level: 1,
+                  folded: false,
+                  ...(seqValue ? { seq: seqValue } : {}),
+                  parent_id: targetBlockId
+                }
+              }
+            }]
+          }
+        };
+
       } else {
         // Parse content for Markdown formatting (bold, italic, strikethrough)
         const parsed = parseMarkdownFormatting(content)
