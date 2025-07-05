@@ -3,6 +3,7 @@
  */
 
 import { Toast } from '@dolphin/lark'
+import { postChangeMap } from './postChangeMap'
 
 // Helper for base62 IDs (27-char) to match Lark block IDs
 const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -104,6 +105,48 @@ const getPageBlockId = async (): Promise<string | null> => {
   }
 
   return pageBlockId
+}
+
+// Determine block type based on Markdown syntax
+function getBlockType(text: string): { type: string; content: string } {
+  if (text.startsWith('# ')) return { type: 'heading1', content: text.slice(2) };
+  if (text.startsWith('## ')) return { type: 'heading2', content: text.slice(3) };
+  if (text.startsWith('### ')) return { type: 'heading3', content: text.slice(4) };
+  const orderedMatch = text.match(/^\s*(\d+)\.\s+(.*)$/);
+  if (orderedMatch) return { type: 'ordered', content: orderedMatch[2] };
+  const bulletMatch = text.match(/^\s*([*\-+])\s+(.*)$/);
+  if (bulletMatch) return { type: 'bullet', content: bulletMatch[2] };
+  return { type: 'text', content: text };
+}
+
+
+// Helper: split text into non-empty paragraphs
+function splitParagraphs(text: string): string[] {
+  return text.split(/\r?\n/).filter(p => p.trim().length > 0);
+}
+
+// Helper: compute indent levels (4 spaces per level)
+function computeIndentLevels(paragraphs: string[]): number[] {
+  return paragraphs.map(line => Math.floor((line.match(/^\s*/)?.[0].length || 0) / 4));
+}
+
+// Node structure for nested list hierarchy
+type ListNode = { id: string; indent: number; children: string[]; parentId?: string };
+
+// Helper: build node hierarchy from IDs and indent levels
+function buildNodesHierarchy(ids: string[], indentLevels: number[]): { nodes: Record<string, ListNode>; roots: string[] } {
+  const nodes: Record<string, ListNode> = {};
+  ids.forEach((id, idx) => { nodes[id] = { id, indent: indentLevels[idx], children: [] }; });
+  const roots: string[] = [];
+  const stack: ListNode[] = [];
+  ids.forEach(id => {
+    const node = nodes[id];
+    while (stack.length && stack[stack.length - 1].indent >= node.indent) stack.pop();
+    if (!stack.length) roots.push(id);
+    else { node.parentId = stack[stack.length - 1].id; stack[stack.length - 1].children.push(id); }
+    stack.push(node);
+  });
+  return { nodes, roots };
 }
 
 /**
@@ -286,129 +329,16 @@ const insertParagraph = async (
           };
         });
       });
-      // Stage 1 dummy op
-      const dummyChangeMap: Record<string, any> = {}
-      for (const [id, payload] of Object.entries(changeMap)) {
-        if (payload.version > 0) {
-          dummyChangeMap[id] = {
-            id,
-            version: 1,
-            payload: { ops: [{ p: ['background_color'], action: { od: 'rgb(2,2,2)' } }] }
-          }
-        }
-      }
-
-      if (Object.keys(dummyChangeMap).length) {
-        const dummyBody = {
-          member_id: String(memberId),
-          uuid: crypto.randomUUID(),
-          page_id: pageBlockId,
-          change_map: dummyChangeMap
-        }
-
-        console.log('Dummy POST → /space/api/docx/blocks/user_change', dummyBody)
-        const dummyResp = await fetch('/space/api/docx/blocks/user_change', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json;charset=UTF-8', ...(csrf ? { 'x-csrftoken': csrf } : {}) },
-          body: JSON.stringify(dummyBody)
-        })
-
-        const dummyJson: any = await dummyResp.json()
-        console.log('dummyJson:', dummyJson)
-
-        if (dummyJson?.data?.block_map) {
-          const blockMap = dummyJson.data.block_map as Record<string, { id: string; version: number }>
-          for (const [bid, info] of Object.entries(blockMap)) {
-            if (changeMap[bid]) changeMap[bid].version = info.version
-          }
-        }
-      }
-      // 3. Prepare the final request body
-      const body = {
-        member_id: String(memberId),
-        uuid: crypto.randomUUID(),
-        page_id: pageBlockId,
-        change_map: changeMap
-      }
-
-      // 4. Try multiple paths just like optimize-lark-docx.ts
-      const paths: string[] = [
-        '/space/api/docx/blocks/user_change'
-        // We could add other potential paths here as in optimize-lark-docx.ts
-      ]
-
-      let resp: Response | null = null
-      let lastErr: any = null
-
-      for (const p of paths) {
-        try {
-          const r = await fetch(p, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json;charset=UTF-8',
-              ...(csrf ? { 'x-csrftoken': csrf } : {}),
-            },
-            body: JSON.stringify(body),
-            credentials: 'include',
-          })
-
-          if (r.ok) {
-            resp = r
-            // break on first successful HTTP status regardless of body format
-            break
-          }
-        } catch (e) {
-          lastErr = e
-        }
-      }
-
-      if (!resp) throw lastErr ?? new Error('user_change request failed')
-
-      let json: any = {}
-      try {
-        json = await resp.json()
-      } catch (e) {
-        console.warn('Non-JSON response from user_change', e)
-        json = {}
-      }
-
-      return resp.ok && json?.code === 0
+      // Delegate /user_change calls to helper
+      return await postChangeMap(changeMap, pageBlockId, memberId, csrf);
     }
-
+    
     // 1. Generate block IDs for each paragraph
+    const newBlockIds = paragraphs.map(() => generateId());
+    const indentLevels = computeIndentLevels(paragraphs);
+    const { nodes, roots } = buildNodesHierarchy(newBlockIds, indentLevels);
 
 
-    // 1. Generate block IDs for each paragraph
-    const newBlockIds = paragraphs.map(() => generateId())
-
-    // Compute indent levels for nested list items (4 spaces per indent level)
-    const indentLevels = paragraphs.map(line =>
-      Math.floor((line.match(/^\s*/)?.[0].length || 0) / 4)
-    )
-
-    // Build nodes map and construct nesting via stack algorithm
-    interface Node { id: string; indent: number; children: string[]; parentId?: string }
-    const nodes: Record<string, Node> = {}
-    newBlockIds.forEach((id, idx) => {
-      nodes[id] = { id, indent: indentLevels[idx], children: [] }
-    })
-    const roots: string[] = []
-    const stack: Node[] = []
-    newBlockIds.forEach(id => {
-      const node = nodes[id]
-      // Pop until we find a shallower indent
-      while (stack.length && stack[stack.length - 1].indent >= node.indent) {
-        stack.pop()
-      }
-      if (!stack.length) {
-        roots.push(id)
-      } else {
-        node.parentId = stack[stack.length - 1].id
-        stack[stack.length - 1].children.push(id)
-      }
-      stack.push(node)
-    })
 
     // Find existing blocks
     const siblings = root.children || []
@@ -419,44 +349,20 @@ const insertParagraph = async (
     const targetBlockId = pageBlockId
 
     // Build operations for parent block (page) using top-level roots
-    const parentOps: Array<{ p: (string | number)[], action: { li: string } | { ld: string } }> = []
+    let parentOps: Array<{ p: (string | number)[], action: { li: string } | { ld: string } }> = []
     // Insert root-level items in reverse so order is preserved
     roots.slice().reverse().forEach(rootId => {
       parentOps.push({ p: ['children', insertPosition], action: { li: rootId } })
     })
 
     // Build change_map
-    const changeMap: Record<string, any> = {
+    let changeMap: Record<string, any> = {
       [targetBlockId]: {
         id: targetBlockId,
         version: 1, // Will be updated after dummy op
         payload: { ops: parentOps }
       }
     }
-
-    // Helper function to determine block type based on Markdown syntax
-    const getBlockType = (text: string): { type: string, content: string } => {
-      // Headings
-      if (text.startsWith('### ')) {
-        return { type: 'heading3', content: text.substring(4) };
-      } else if (text.startsWith('## ')) {
-        return { type: 'heading2', content: text.substring(3) };
-      } else if (text.startsWith('# ')) {
-        return { type: 'heading1', content: text.substring(2) };
-      }
-      // Ordered list: "1. text" or "123. text"
-      const orderedMatch = text.match(/^\s*(\d+)\.\s+(.*)$/);
-      if (orderedMatch) {
-        return { type: 'ordered', content: orderedMatch[2] };
-      }
-      // Bullet list: "* text" or "- text" or "+ text"
-      const bulletMatch = text.match(/^\s*([*\-+])\s+(.*)$/);
-      if (bulletMatch) {
-        return { type: 'bullet', content: bulletMatch[2] };
-      }
-      // Normal paragraph
-      return { type: 'text', content: text };
-    };
 
     // Helper function to parse Markdown formatting
     type FormattingType = 'bold' | 'italic' | 'strikethrough';
@@ -713,95 +619,8 @@ const insertParagraph = async (
       }
     })
 
-    // 2. Stage 1: dummy op to get correct block versions - EXACTLY like optimize-lark-docx.ts
-    const dummyChangeMap: Record<string, any> = {}
-    for (const [id, payload] of Object.entries(changeMap)) {
-      if (payload.version > 0) {
-        dummyChangeMap[id] = {
-          id,
-          version: 1,
-          payload: { ops: [{ p: ['background_color'], action: { od: 'rgb(2,2,2)' } }] }
-        }
-      }
-    }
-
-    if (Object.keys(dummyChangeMap).length) {
-      const dummyBody = {
-        member_id: String(memberId),
-        uuid: crypto.randomUUID(),
-        page_id: pageBlockId,
-        change_map: dummyChangeMap
-      }
-
-      console.log('Dummy POST → /space/api/docx/blocks/user_change', dummyBody)
-      const dummyResp = await fetch('/space/api/docx/blocks/user_change', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json;charset=UTF-8', ...(csrf ? { 'x-csrftoken': csrf } : {}) },
-        body: JSON.stringify(dummyBody)
-      })
-
-      const dummyJson: any = await dummyResp.json()
-      console.log('dummyJson:', dummyJson)
-
-      if (dummyJson?.data?.block_map) {
-        const blockMap = dummyJson.data.block_map as Record<string, { id: string; version: number }>
-        for (const [bid, info] of Object.entries(blockMap)) {
-          if (changeMap[bid]) changeMap[bid].version = info.version
-        }
-      }
-    }
-
-    // 3. Prepare the final request body
-    const body = {
-      member_id: String(memberId),
-      uuid: crypto.randomUUID(),
-      page_id: pageBlockId,
-      change_map: changeMap
-    }
-
-    // 4. Try multiple paths just like optimize-lark-docx.ts
-    const paths: string[] = [
-      '/space/api/docx/blocks/user_change'
-      // We could add other potential paths here as in optimize-lark-docx.ts
-    ]
-
-    let resp: Response | null = null
-    let lastErr: any = null
-
-    for (const p of paths) {
-      try {
-        const r = await fetch(p, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json;charset=UTF-8',
-            ...(csrf ? { 'x-csrftoken': csrf } : {}),
-          },
-          body: JSON.stringify(body),
-          credentials: 'include',
-        })
-
-        if (r.ok) {
-          resp = r
-          // break on first successful HTTP status regardless of body format
-          break
-        }
-      } catch (e) {
-        lastErr = e
-      }
-    }
-
-    if (!resp) throw lastErr ?? new Error('user_change request failed')
-
-    let json: any = {}
-    try {
-      json = await resp.json()
-    } catch (e) {
-      console.warn('Non-JSON response from user_change', e)
-      json = {}
-    }
-
-    return resp.ok && json?.code === 0
+    // Delegate /user_change calls to helper
+    return await postChangeMap(changeMap, pageBlockId, memberId, csrf);
   } catch (error) {
     console.error('Error inserting paragraph:', error)
     return false
@@ -817,3 +636,4 @@ const generateUuid = (): string => {
 
 // Execute the main function
 main().catch(console.error)
+

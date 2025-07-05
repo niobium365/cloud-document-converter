@@ -4,7 +4,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "turbo run build",
+    "build": "pnpm --filter @dolphin/chrome-extension run build:dev",
     "type-check": "turbo run type-check",
     "clean": "turbo run clean",
     "test": "turbo run test"
