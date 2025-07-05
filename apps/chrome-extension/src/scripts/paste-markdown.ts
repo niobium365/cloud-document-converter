@@ -135,6 +135,249 @@ const insertParagraph = async (
       console.warn('No valid paragraphs to insert')
       return false
     }
+
+    // Table support: detect markdown table
+    const tableHeaderRegex = /^\|(.+)\|$/;
+    const tableDividerRegex = /^\|(?:\s*[-:]+\s*\|)+$/;
+    if (paragraphs.length >= 2 && tableHeaderRegex.test(paragraphs[0].trim()) && tableDividerRegex.test(paragraphs[1].trim())) {
+      // parse header and body rows
+      const headerCells = paragraphs[0].trim().slice(1, -1).split('|').map(c => c.trim());
+      const bodyRows = paragraphs.slice(2).map(row => row.trim().slice(1, -1).split('|').map(c => c.trim()));
+      // generate IDs
+      const tableBlockId = generateId();
+      const columnIds = headerCells.map(() => 'col' + generateUuid());
+      const rowIds = [generateUuid(), ...bodyRows.map(() => generateUuid())].map(id => 'row' + id);
+      // generate cell and text IDs
+      const cellIds: string[][] = [];
+      const textIds: string[][] = [];
+      headerCells.forEach((_, colIdx) => {
+        textIds[0] = textIds[0] || [];
+        cellIds[0] = cellIds[0] || [];
+        textIds[0][colIdx] = generateId();
+        cellIds[0][colIdx] = generateId();
+      });
+      bodyRows.forEach((cells, rowIdx) => {
+        textIds[rowIdx + 1] = [];
+        cellIds[rowIdx + 1] = [];
+        cells.forEach((_, colIdx) => {
+          textIds[rowIdx + 1][colIdx] = generateId();
+          cellIds[rowIdx + 1][colIdx] = generateId();
+        });
+      });
+      // build changeMap
+      const changeMap: Record<string, any> = {};
+      // page block insertion
+      const parentOps = [{ p: ['children', 0], action: { li: tableBlockId } }];
+      changeMap[pageBlockId] = { id: pageBlockId, version: 1, payload: { ops: parentOps } };
+      // table block
+      changeMap[tableBlockId] = {
+        id: tableBlockId,
+        version: 0,
+        payload: {
+          ops: [{
+            p: [],
+            action: {
+              oi: {
+                type: 'table',
+                children: cellIds.flat(),
+                comments: [],
+                revisions: [],
+                author: author,
+                columns_id: columnIds,
+                rows_id: rowIds,
+                column_set: Object.fromEntries(columnIds.map(id => [id, { column_width: 200 }])) as any,
+                cell_set: Object.fromEntries(
+                  cellIds.flatMap((row, r) =>
+                    row.map((cId, c) => {
+                      const key = rowIds[r] + columnIds[c];
+                      const val = { block_id: cId, merge_info: { row_span: 1, col_span: 1 } };
+                      return [key, val] as [string, any];
+                    })
+                  )
+                ) as any,
+
+
+                parent_id: pageBlockId
+              }
+            }
+          }]
+        }
+      };
+      // cell and text blocks
+      headerCells.forEach((cellText, colIdx) => {
+        const textId = textIds[0][colIdx];
+        const cellId = cellIds[0][colIdx];
+        const len = cellText.length.toString(36);
+        changeMap[textId] = {
+          id: textId,
+          version: 0,
+          payload: {
+            ops: [{
+              p: [],
+              action: {
+                oi: {
+                  type: 'text',
+                  children: [],
+                  comments: [],
+                  revisions: [],
+                  author: author,
+                  text: {
+                    initialAttributedTexts: { text: { '0': cellText }, attribs: { '0': `*0+${len}` } },
+                    apool: { numToAttrib: { '0': ['author', author] }, nextNum: 1 }
+                  },
+                  folded: false,
+                  align: 'left',
+                  parent_id: cellId
+                }
+              }
+            }]
+          }
+        };
+        changeMap[cellId] = {
+          id: cellId,
+          version: 0,
+          payload: {
+            ops: [{
+              p: [],
+              action: { oi: { type: 'table_cell', children: [textId], comments: [], revisions: [], author: author, parent_id: tableBlockId } }
+            }]
+          }
+        };
+      });
+      bodyRows.forEach((cells, rowIdx) => {
+        cells.forEach((cellText, colIdx) => {
+          const textId = textIds[rowIdx + 1][colIdx];
+          const cellId = cellIds[rowIdx + 1][colIdx];
+          const len = cellText.length.toString(36);
+          changeMap[textId] = {
+            id: textId,
+            version: 0,
+            payload: {
+              ops: [{
+                p: [],
+                action: {
+                  oi: {
+                    type: 'text',
+                    children: [],
+                    comments: [],
+                    revisions: [],
+                    author: author,
+                    text: {
+                      initialAttributedTexts: { text: { '0': cellText }, attribs: { '0': `*0+${len}` } },
+                      apool: { numToAttrib: { '0': ['author', author] }, nextNum: 1 }
+                    },
+                    folded: false,
+                    align: 'left',
+                    parent_id: cellId
+                  }
+                }
+              }]
+            }
+          };
+          changeMap[cellId] = {
+            id: cellId,
+            version: 0,
+            payload: {
+              ops: [{
+                p: [],
+                action: { oi: { type: 'table_cell', children: [textId], comments: [], revisions: [], author: author, parent_id: tableBlockId } }
+              }]
+            }
+          };
+        });
+      });
+      // Stage 1 dummy op
+      const dummyChangeMap: Record<string, any> = {}
+      for (const [id, payload] of Object.entries(changeMap)) {
+        if (payload.version > 0) {
+          dummyChangeMap[id] = {
+            id,
+            version: 1,
+            payload: { ops: [{ p: ['background_color'], action: { od: 'rgb(2,2,2)' } }] }
+          }
+        }
+      }
+      
+      if (Object.keys(dummyChangeMap).length) {
+        const dummyBody = {
+          member_id: String(memberId),
+          uuid: crypto.randomUUID(),
+          page_id: pageBlockId,
+          change_map: dummyChangeMap
+        }
+        
+        console.log('Dummy POST → /space/api/docx/blocks/user_change', dummyBody)
+        const dummyResp = await fetch('/space/api/docx/blocks/user_change', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json;charset=UTF-8', ...(csrf ? { 'x-csrftoken': csrf } : {}) },
+          body: JSON.stringify(dummyBody)
+        })
+        
+        const dummyJson: any = await dummyResp.json()
+        console.log('dummyJson:', dummyJson)
+        
+        if (dummyJson?.data?.block_map) {
+          const blockMap = dummyJson.data.block_map as Record<string, { id: string; version: number }>
+          for (const [bid, info] of Object.entries(blockMap)) {
+            if (changeMap[bid]) changeMap[bid].version = info.version
+          }
+        }
+      }
+    // 3. Prepare the final request body
+    const body = {
+      member_id: String(memberId),
+      uuid: crypto.randomUUID(),
+      page_id: pageBlockId,
+      change_map: changeMap
+    }
+    
+    // 4. Try multiple paths just like optimize-lark-docx.ts
+    const paths: string[] = [
+      '/space/api/docx/blocks/user_change'
+      // We could add other potential paths here as in optimize-lark-docx.ts
+    ]
+    
+    let resp: Response | null = null
+    let lastErr: any = null
+    
+    for (const p of paths) {
+      try {
+        const r = await fetch(p, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json;charset=UTF-8',
+            ...(csrf ? { 'x-csrftoken': csrf } : {}),
+          },
+          body: JSON.stringify(body),
+          credentials: 'include',
+        })
+        
+        if (r.ok) {
+          resp = r
+          // break on first successful HTTP status regardless of body format
+          break
+        }
+      } catch (e) {
+        lastErr = e
+      }
+    }
+    
+    if (!resp) throw lastErr ?? new Error('user_change request failed')
+    
+    let json: any = {}
+    try {
+      json = await resp.json()
+    } catch (e) {
+      console.warn('Non-JSON response from user_change', e)
+      json = {}
+    }
+    
+    return resp.ok && json?.code === 0
+    }
+
+    // 1. Generate block IDs for each paragraph
+
     
     // 1. Generate block IDs for each paragraph
     const newBlockIds = paragraphs.map(() => generateId())
