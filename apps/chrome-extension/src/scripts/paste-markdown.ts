@@ -23,12 +23,12 @@ const main = async () => {
     if (!PageMain) {
       Toast.warning({ content: 'Not a Lark doc page' })
       return
-    }    
+    }
     const root = PageMain.blockManager?.rootBlockModel
     if (!root) {
       Toast.warning({ content: 'Cannot access document model.' })
       return
-    }    
+    }
     // Get current document info
     const docIdMatch = window.location.pathname.match(/\/docx\/([^/]+)/)
     if (!docIdMatch) {
@@ -36,12 +36,12 @@ const main = async () => {
       return
     }
     const docToken = docIdMatch[1]
-    
+
     // Determine page block ID (from record)
     const pageBlockId = root.record?.id as string;
     if (!pageBlockId) {
-        Toast.warning({ content: 'Cannot determine page block ID' });
-        return;
+      Toast.warning({ content: 'Cannot determine page block ID' });
+      return;
     }
 
     // Get text from localStorage (set by background script from popup clipboard content)
@@ -53,11 +53,11 @@ const main = async () => {
       }
 
       // Clear the stored content after retrieving it
-      try { window.localStorage.removeItem('cdc_markdown_content'); } catch {}
-      
+      try { window.localStorage.removeItem('cdc_markdown_content'); } catch { }
+
       // Insert the text as a new paragraph
       await insertParagraph(pageBlockId, markdownText, memberId, csrf)
-      
+
       Toast.success({ content: 'Markdown text inserted successfully!' })
     } catch (error) {
       console.error('Clipboard access error:', error)
@@ -125,10 +125,10 @@ const insertParagraph = async (
       console.error('Cannot access document model')
       return false
     }
-    
+
     // Get author from document model
     const author = root.record.snapshot.author || memberId
-    
+
     // Split text by newlines to create multiple paragraphs
     const paragraphs = text.split(/\r?\n/).filter(p => p.trim().length > 0)
     if (paragraphs.length === 0) {
@@ -297,7 +297,7 @@ const insertParagraph = async (
           }
         }
       }
-      
+
       if (Object.keys(dummyChangeMap).length) {
         const dummyBody = {
           member_id: String(memberId),
@@ -305,7 +305,7 @@ const insertParagraph = async (
           page_id: pageBlockId,
           change_map: dummyChangeMap
         }
-        
+
         console.log('Dummy POST → /space/api/docx/blocks/user_change', dummyBody)
         const dummyResp = await fetch('/space/api/docx/blocks/user_change', {
           method: 'POST',
@@ -313,10 +313,10 @@ const insertParagraph = async (
           headers: { 'Content-Type': 'application/json;charset=UTF-8', ...(csrf ? { 'x-csrftoken': csrf } : {}) },
           body: JSON.stringify(dummyBody)
         })
-        
+
         const dummyJson: any = await dummyResp.json()
         console.log('dummyJson:', dummyJson)
-        
+
         if (dummyJson?.data?.block_map) {
           const blockMap = dummyJson.data.block_map as Record<string, { id: string; version: number }>
           for (const [bid, info] of Object.entries(blockMap)) {
@@ -324,61 +324,61 @@ const insertParagraph = async (
           }
         }
       }
-    // 3. Prepare the final request body
-    const body = {
-      member_id: String(memberId),
-      uuid: crypto.randomUUID(),
-      page_id: pageBlockId,
-      change_map: changeMap
-    }
-    
-    // 4. Try multiple paths just like optimize-lark-docx.ts
-    const paths: string[] = [
-      '/space/api/docx/blocks/user_change'
-      // We could add other potential paths here as in optimize-lark-docx.ts
-    ]
-    
-    let resp: Response | null = null
-    let lastErr: any = null
-    
-    for (const p of paths) {
-      try {
-        const r = await fetch(p, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json;charset=UTF-8',
-            ...(csrf ? { 'x-csrftoken': csrf } : {}),
-          },
-          body: JSON.stringify(body),
-          credentials: 'include',
-        })
-        
-        if (r.ok) {
-          resp = r
-          // break on first successful HTTP status regardless of body format
-          break
-        }
-      } catch (e) {
-        lastErr = e
+      // 3. Prepare the final request body
+      const body = {
+        member_id: String(memberId),
+        uuid: crypto.randomUUID(),
+        page_id: pageBlockId,
+        change_map: changeMap
       }
-    }
-    
-    if (!resp) throw lastErr ?? new Error('user_change request failed')
-    
-    let json: any = {}
-    try {
-      json = await resp.json()
-    } catch (e) {
-      console.warn('Non-JSON response from user_change', e)
-      json = {}
-    }
-    
-    return resp.ok && json?.code === 0
+
+      // 4. Try multiple paths just like optimize-lark-docx.ts
+      const paths: string[] = [
+        '/space/api/docx/blocks/user_change'
+        // We could add other potential paths here as in optimize-lark-docx.ts
+      ]
+
+      let resp: Response | null = null
+      let lastErr: any = null
+
+      for (const p of paths) {
+        try {
+          const r = await fetch(p, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json;charset=UTF-8',
+              ...(csrf ? { 'x-csrftoken': csrf } : {}),
+            },
+            body: JSON.stringify(body),
+            credentials: 'include',
+          })
+
+          if (r.ok) {
+            resp = r
+            // break on first successful HTTP status regardless of body format
+            break
+          }
+        } catch (e) {
+          lastErr = e
+        }
+      }
+
+      if (!resp) throw lastErr ?? new Error('user_change request failed')
+
+      let json: any = {}
+      try {
+        json = await resp.json()
+      } catch (e) {
+        console.warn('Non-JSON response from user_change', e)
+        json = {}
+      }
+
+      return resp.ok && json?.code === 0
     }
 
     // 1. Generate block IDs for each paragraph
 
-    
+
     // 1. Generate block IDs for each paragraph
     const newBlockIds = paragraphs.map(() => generateId())
 
@@ -409,22 +409,22 @@ const insertParagraph = async (
       }
       stack.push(node)
     })
-    
+
     // Find existing blocks
     const siblings = root.children || []
     // We'll insert at the beginning of the document as suggested
     const insertPosition = 0 as number
-    
+
     // Target block to modify (parent)
     const targetBlockId = pageBlockId
-    
+
     // Build operations for parent block (page) using top-level roots
-    const parentOps: Array<{p: (string|number)[], action: {li: string} | {ld: string}}> = []
+    const parentOps: Array<{ p: (string | number)[], action: { li: string } | { ld: string } }> = []
     // Insert root-level items in reverse so order is preserved
     roots.slice().reverse().forEach(rootId => {
       parentOps.push({ p: ['children', insertPosition], action: { li: rootId } })
     })
-    
+
     // Build change_map
     const changeMap: Record<string, any> = {
       [targetBlockId]: {
@@ -433,7 +433,7 @@ const insertParagraph = async (
         payload: { ops: parentOps }
       }
     }
-    
+
     // Helper function to determine block type based on Markdown syntax
     const getBlockType = (text: string): { type: string, content: string } => {
       // Headings
@@ -457,21 +457,21 @@ const insertParagraph = async (
       // Normal paragraph
       return { type: 'text', content: text };
     };
-    
+
     // Helper function to parse Markdown formatting
     type FormattingType = 'bold' | 'italic' | 'strikethrough';
-    
+
     interface TextSegment {
       text: string;
       formats: FormattingType[];
     }
-    
+
     interface ParsedText {
       text: string;
       attribs: string;
       formatTypes: Record<string, [string, string]>;
     }
-    
+
     const parseMarkdownFormatting = (text: string): ParsedText => {
       // Initialize the result
       const result: ParsedText = {
@@ -482,46 +482,46 @@ const insertParagraph = async (
           '0': ['author', author]
         }
       };
-      
+
       // If there's no special formatting, return simple format
       if (!text.includes('**') && !text.includes('*') && !text.includes('~~')) {
         result.attribs = `*0+${text.length.toString(36)}`;
         return result;
       }
-      
+
       // Format markers and their corresponding attribute types
       const formatMarkers = [
         { marker: '**', type: 'bold' },
         { marker: '*', type: 'italic' },
         { marker: '~~', type: 'strikethrough' }
       ];
-      
+
       // Split the text into segments based on the Markdown formatting
       let segments: TextSegment[] = [{ text: text, formats: [] }];
-      
+
       // Process each format marker
       for (const { marker, type } of formatMarkers) {
         let newSegments: TextSegment[] = [];
-        
+
         for (const segment of segments) {
           if (segment.formats.includes(type as FormattingType) || (type === 'italic' && segment.formats.includes('bold'))) {
             // Already has this format, keep as is
             newSegments.push(segment);
             continue;
           }
-          
+
           const parts = segment.text.split(marker);
           if (parts.length === 1) {
             // No marker found, keep as is
             newSegments.push(segment);
             continue;
           }
-          
+
           let isFormatted = false;
           for (let i = 0; i < parts.length; i++) {
             const part = parts[i];
             if (part === '') { isFormatted = !isFormatted; continue; }
-            
+
             if (isFormatted) {
               newSegments.push({
                 text: part,
@@ -536,22 +536,22 @@ const insertParagraph = async (
             isFormatted = !isFormatted;
           }
         }
-        
+
         segments = newSegments;
       }
-      
+
       // Combine all segments into a single text
       let plainText = '';
       let attribs = '';
       let nextNum = 1; // Start from 1 since 0 is reserved for author
       const formatTypeMap: Record<string, number> = {};
-      
+
       for (const segment of segments) {
         plainText += segment.text;
-        
+
         // Create attribute string for this segment
         let segAttrib = '*0'; // Always include author
-        
+
         // Add format attributes
         for (const format of segment.formats) {
           if (!formatTypeMap[format]) {
@@ -560,17 +560,17 @@ const insertParagraph = async (
           }
           segAttrib += `*${formatTypeMap[format]}`;
         }
-        
+
         // Add length in base36
         segAttrib += `+${segment.text.length.toString(36)}`;
         attribs += segAttrib;
       }
-      
+
       result.text = plainText;
       result.attribs = attribs;
       return result;
     };
-    
+
     // Variables to manage ordered list numbering
     let inOrderedList = false;
     // Add each paragraph block to the change_map
@@ -578,14 +578,14 @@ const insertParagraph = async (
     newBlockIds.forEach((blockId, index) => {
       // Get the corresponding paragraph text
       const paragraphText = paragraphs[index]
-      
+
       // Determine block type based on markdown syntax
       const { type, content } = getBlockType(paragraphText)
-      
+
       if (type === 'heading1' || type === 'heading2' || type === 'heading3') {
         // Calculate the actual length of the text for the attribs field
         const textLength = content.length.toString(36)
-        
+
         // Define new block for this heading paragraph
         changeMap[blockId] = {
           id: blockId,
@@ -675,10 +675,10 @@ const insertParagraph = async (
       } else {
         // Parse content for Markdown formatting (bold, italic, strikethrough)
         const parsed = parseMarkdownFormatting(content)
-        
+
         // Build numToAttrib from parsed formatting types
         const numToAttrib: Record<string, [string, string]> = { ...parsed.formatTypes }
-        
+
         // Define new block for this formatted text paragraph
         changeMap[blockId] = {
           id: blockId,
@@ -712,7 +712,7 @@ const insertParagraph = async (
         }
       }
     })
-    
+
     // 2. Stage 1: dummy op to get correct block versions - EXACTLY like optimize-lark-docx.ts
     const dummyChangeMap: Record<string, any> = {}
     for (const [id, payload] of Object.entries(changeMap)) {
@@ -724,7 +724,7 @@ const insertParagraph = async (
         }
       }
     }
-    
+
     if (Object.keys(dummyChangeMap).length) {
       const dummyBody = {
         member_id: String(memberId),
@@ -732,7 +732,7 @@ const insertParagraph = async (
         page_id: pageBlockId,
         change_map: dummyChangeMap
       }
-      
+
       console.log('Dummy POST → /space/api/docx/blocks/user_change', dummyBody)
       const dummyResp = await fetch('/space/api/docx/blocks/user_change', {
         method: 'POST',
@@ -740,10 +740,10 @@ const insertParagraph = async (
         headers: { 'Content-Type': 'application/json;charset=UTF-8', ...(csrf ? { 'x-csrftoken': csrf } : {}) },
         body: JSON.stringify(dummyBody)
       })
-      
+
       const dummyJson: any = await dummyResp.json()
       console.log('dummyJson:', dummyJson)
-      
+
       if (dummyJson?.data?.block_map) {
         const blockMap = dummyJson.data.block_map as Record<string, { id: string; version: number }>
         for (const [bid, info] of Object.entries(blockMap)) {
@@ -751,7 +751,7 @@ const insertParagraph = async (
         }
       }
     }
-    
+
     // 3. Prepare the final request body
     const body = {
       member_id: String(memberId),
@@ -759,16 +759,16 @@ const insertParagraph = async (
       page_id: pageBlockId,
       change_map: changeMap
     }
-    
+
     // 4. Try multiple paths just like optimize-lark-docx.ts
     const paths: string[] = [
       '/space/api/docx/blocks/user_change'
       // We could add other potential paths here as in optimize-lark-docx.ts
     ]
-    
+
     let resp: Response | null = null
     let lastErr: any = null
-    
+
     for (const p of paths) {
       try {
         const r = await fetch(p, {
@@ -780,7 +780,7 @@ const insertParagraph = async (
           body: JSON.stringify(body),
           credentials: 'include',
         })
-        
+
         if (r.ok) {
           resp = r
           // break on first successful HTTP status regardless of body format
@@ -790,9 +790,9 @@ const insertParagraph = async (
         lastErr = e
       }
     }
-    
+
     if (!resp) throw lastErr ?? new Error('user_change request failed')
-    
+
     let json: any = {}
     try {
       json = await resp.json()
@@ -800,7 +800,7 @@ const insertParagraph = async (
       console.warn('Non-JSON response from user_change', e)
       json = {}
     }
-    
+
     return resp.ok && json?.code === 0
   } catch (error) {
     console.error('Error inserting paragraph:', error)
