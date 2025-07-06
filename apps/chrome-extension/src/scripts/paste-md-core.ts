@@ -181,10 +181,10 @@ export function generateChangeMap(
     let changeMap: Record<string, any> = {};
 
     try {
-        // Split text by newlines to create multiple paragraphs
-        const paragraphs = text.split(/\r?\n/).filter(p => p.trim().length > 0)
-        if (paragraphs.length === 0) {
-            console.warn('No valid paragraphs to insert')
+        // Split text by newlines
+        const lines = text.split(/\r?\n/)
+        if (lines.length === 0) {
+            console.warn('No valid content to insert')
             return changeMap
         }
 
@@ -192,17 +192,17 @@ export function generateChangeMap(
         const tableHeaderRegex = /^\|(.+)\|$/;
         const tableDividerRegex = /^\|(?:\s*[-:]+\s*\|)+$/;
 
-        // Group paragraphs into sections (tables, code blocks or regular paragraphs)
-        let sections: { type: 'table' | 'paragraphs' | 'code' | 'hr', content: string[], language?: string }[] = [];
+        // Group paragraphs into sections (tables, code blocks, blockquotes, or regular paragraphs)
+        let sections: { type: 'table' | 'paragraphs' | 'code' | 'hr' | 'blockquote', content: string[], language?: string }[] = [];
         let currentSection: string[] = [];
-        let currentType: 'table' | 'paragraphs' | 'code' | null = null;
+        let currentType: 'table' | 'paragraphs' | 'code' | 'blockquote' | null = null;
         let codeLanguage: string | undefined = undefined;
 
         // Helper function to determine if lines form a table
         const isTableStart = (idx: number) => {
-            return idx < paragraphs.length - 1 &&
-                tableHeaderRegex.test(paragraphs[idx].trim()) &&
-                tableDividerRegex.test(paragraphs[idx + 1].trim());
+            return idx < lines.length - 1 &&
+                tableHeaderRegex.test(lines[idx].trim()) &&
+                tableDividerRegex.test(lines[idx + 1].trim());
         };
 
         // Helper function to determine if a line is a code fence start
@@ -222,12 +222,34 @@ export function generateChangeMap(
             return (/^-{3,}$/.test(trimmedLine) || /^\*{3,}$/.test(trimmedLine) || /^_{3,}$/.test(trimmedLine));
         };
 
-        // Group paragraphs into table, code block, and regular paragraph sections
-        for (let i = 0; i < paragraphs.length; i++) {
-            const currentLine = paragraphs[i].trim();
-            const codeLang = isCodeFenceStart(currentLine);
+        // Helper function to determine if a line is a blockquote
+        const isBlockquoteLine = (line: string) => {
+            return line.trim().startsWith('>');
+        };
+        
+        // Helper function to extract content from a blockquote line
+        const extractBlockquoteContent = (line: string) => {
+            return line.replace(/^\s*>\s?/, '');
+        };
 
-            if (isHorizontalRule(currentLine)) {
+        // Group paragraphs into table, code block, blockquote, and regular paragraph sections
+        for (let i = 0; i < lines.length; i++) {
+            const currentLine = lines[i];
+            const trimmedLine = currentLine.trim();
+            const codeLang = isCodeFenceStart(trimmedLine);
+            
+            // Skip empty lines unless we're in a blockquote section
+            if (trimmedLine === '' && currentType !== 'blockquote') {
+                // End current section if any
+                if (currentType && currentSection.length > 0) {
+                    sections.push({ type: currentType, content: [...currentSection], language: codeLanguage });
+                    currentSection = [];
+                    currentType = null;
+                }
+                continue;
+            }
+
+            if (isHorizontalRule(trimmedLine)) {
                 // Found horizontal rule - finish any current section
                 if (currentType && currentSection.length > 0) {
                     sections.push({ type: currentType, content: [...currentSection], language: codeLanguage });
@@ -252,13 +274,13 @@ export function generateChangeMap(
                 const codeContent: string[] = [];
                 i++; // Skip the fence line
 
-                while (i < paragraphs.length && !isCodeFenceEnd(paragraphs[i].trim())) {
-                    codeContent.push(paragraphs[i]);
+                while (i < lines.length && !isCodeFenceEnd(lines[i].trim())) {
+                    codeContent.push(lines[i]);
                     i++;
                 }
 
                 // Handle the closing fence (skip it if we found it)
-                if (i < paragraphs.length && isCodeFenceEnd(paragraphs[i].trim())) {
+                if (i < lines.length && isCodeFenceEnd(lines[i].trim())) {
                     i++; // Skip the closing fence
                 }
                 i--; // Adjust for the outer loop increment
@@ -277,12 +299,12 @@ export function generateChangeMap(
 
                 // Start collecting a table
                 currentType = 'table';
-                currentSection = [paragraphs[i], paragraphs[i + 1]];
+                currentSection = [lines[i], lines[i + 1]];
                 i += 2; // Skip the header and divider
 
                 // Collect table body rows
-                while (i < paragraphs.length && tableHeaderRegex.test(paragraphs[i].trim())) {
-                    currentSection.push(paragraphs[i]);
+                while (i < lines.length && tableHeaderRegex.test(lines[i].trim())) {
+                    currentSection.push(lines[i]);
                     i++;
                 }
                 i--; // Adjust for the loop increment
@@ -291,6 +313,50 @@ export function generateChangeMap(
                 sections.push({ type: 'table', content: [...currentSection] });
                 currentSection = [];
                 currentType = null;
+            } else if (isBlockquoteLine(currentLine)) {
+                // If we were collecting something other than blockquotes, save it
+                if (currentType !== 'blockquote' && currentSection.length > 0) {
+                    sections.push({ type: currentType || 'paragraphs', content: [...currentSection], language: codeLanguage });
+                    currentSection = [];
+                }
+                
+                // Start or continue a blockquote section
+                currentType = 'blockquote';
+                
+                // Add the content without the blockquote marker
+                const content = extractBlockquoteContent(currentLine);
+                currentSection.push(content);
+            } else if (currentType === 'blockquote') {
+                // Check if this is an empty line that might end the blockquote
+                if (trimmedLine === '') {
+                    // We need to peek ahead to see if next non-empty line is a blockquote
+                    let isBlockquoteContinuation = false;
+                    let j = i + 1;
+                    while (j < lines.length) {
+                        const nextLine = lines[j].trim();
+                        if (nextLine !== '') {
+                            // If next non-empty line is a blockquote, this is just a paragraph break
+                            isBlockquoteContinuation = isBlockquoteLine(lines[j]);
+                            break;
+                        }
+                        j++;
+                    }
+                    
+                    if (isBlockquoteContinuation) {
+                        // Empty line is part of the blockquote - marks paragraph separation
+                        currentSection.push('');
+                    } else {
+                        // Empty line ends the blockquote section
+                        if (currentSection.length > 0) {
+                            sections.push({ type: 'blockquote', content: [...currentSection], language: undefined });
+                        }
+                        currentSection = [];
+                        currentType = null;
+                    }
+                } else {
+                    // Content line without '>' marker - still part of blockquote
+                    currentSection.push(trimmedLine);
+                }
             } else {
                 // If we're starting a new regular paragraph section
                 if (currentType !== 'paragraphs') {
@@ -301,7 +367,7 @@ export function generateChangeMap(
                     }
                     currentType = 'paragraphs';
                 }
-                currentSection.push(paragraphs[i]);
+                currentSection.push(lines[i]);
             }
         }
 
@@ -590,6 +656,119 @@ export function generateChangeMap(
                                 }
                             };
                         });
+                    });
+                } else if (section.type === 'blockquote') {
+                    // Process blockquote section
+                    
+                    // Generate blockquote container block ID
+                    const blockquoteContainerId = generateId();
+                    rootBlockIds.push(blockquoteContainerId);
+                    
+                    // Process blockquote content: group lines into paragraphs
+                    let paragraphs: string[] = [];
+                    
+                    // We want to preserve the individual lines in the blockquote
+                    // Each non-empty line becomes its own paragraph
+                    for (let i = 0; i < section.content.length; i++) {
+                        const line = section.content[i].trim();
+                        
+                        // Skip empty lines
+                        if (line === '') {
+                            continue;
+                        }
+                        
+                        // Add line as its own paragraph
+                        paragraphs.push(line);
+                    }
+                    
+                    // If no paragraphs were created, add an empty one
+                    if (paragraphs.length === 0) {
+                        paragraphs.push('');
+                    }
+                    
+                    // If no paragraphs were created (e.g., only empty lines), create an empty paragraph
+                    if (paragraphs.length === 0) {
+                        paragraphs.push('');
+                    }
+                    
+                    // Generate child text block IDs for each paragraph
+                    const textBlockIds = paragraphs.map(() => generateId());
+                    
+                    // Create blockquote container block
+                    changeMap[blockquoteContainerId] = {
+                        id: blockquoteContainerId,
+                        version: 0,
+                        payload: {
+                            ops: [{
+                                p: [],
+                                action: {
+                                    oi: {
+                                        type: "quote_container",
+                                        children: textBlockIds,
+                                        comments: [],
+                                        revisions: [],
+                                        author: author,
+                                        parent_id: pageBlockId
+                                    }
+                                }
+                            }]
+                        }
+                    };
+                    
+                    // Add block to page children
+                    if (!changeMap[pageBlockId]) {
+                        changeMap[pageBlockId] = {
+                            id: pageBlockId,
+                            version: 452,
+                            payload: {
+                                ops: []
+                            }
+                        };
+                    }
+                    
+                    changeMap[pageBlockId].payload.ops.push({
+                        p: ["children", insertPosition],
+                        action: {
+                            li: blockquoteContainerId
+                        }
+                    });
+                    
+                    // Create text blocks for each paragraph in blockquote
+                    paragraphs.forEach((paragraph, index) => {
+                        // Parse markdown formatting within blockquote paragraph
+                        const parsed = parseMarkdownFormatting(paragraph, author);
+                        const textId = textBlockIds[index];
+                        
+                        changeMap[textId] = {
+                            id: textId,
+                            version: 0,
+                            payload: {
+                                ops: [{
+                                    p: [],
+                                    action: {
+                                        oi: {
+                                            type: "text",
+                                            children: [],
+                                            comments: [],
+                                            revisions: [],
+                                            author: author,
+                                            text: {
+                                                initialAttributedTexts: {
+                                                    text: { "0": parsed.text },
+                                                    attribs: { "0": parsed.attribs }
+                                                },
+                                                apool: {
+                                                    numToAttrib: parsed.formatTypes,
+                                                    nextNum: Object.keys(parsed.formatTypes).length
+                                                }
+                                            },
+                                            folded: false,
+                                            parent_id: blockquoteContainerId
+                                        }
+                                    }
+                                }]
+                            }
+                        };
                     });
                 } else {
                     // Process paragraphs section
