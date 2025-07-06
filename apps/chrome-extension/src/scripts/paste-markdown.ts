@@ -90,14 +90,42 @@ const insertParagraph = async (
   
       // Get author from document model
       const author = root.record.snapshot.author || memberId
-  
-      const changeMap = generateChangeMap(pageBlockId,text,author);
-
-      if(Object.keys(changeMap).length === 0)
+      
+      // Get all existing children of the root block to delete them first
+      const existingChildren = root.struct?.record?.snapshot?.children || [];
+      
+      // Generate change map for the new markdown content
+      const contentChangeMap = generateChangeMap(pageBlockId, text, author);
+      
+      if(Object.keys(contentChangeMap).length === 0)
         return false;
+      
+      // Create the final change map that includes deletion of existing blocks
+      const changeMap = { ...contentChangeMap };
+      
+      
+      // Add deletion operations for each existing child block
+      if (existingChildren.length > 0) {
+        // Make sure the root block is in the change map
+        if (!changeMap[pageBlockId]) {
+          changeMap[pageBlockId] = {
+            id: pageBlockId,
+            version: root.struct?.record?.version || 0,
+            payload: { ops: [] }
+          };
+        }
         
-    // Delegate /user_change calls to helper
-    return await postChangeMap(changeMap, pageBlockId, memberId, csrf);
+        // Add deletion operations for each child
+        existingChildren.forEach((childId: string, index: number) => {
+          changeMap[pageBlockId].payload.ops.unshift({
+            p: ['children', index],
+            action: { ld: childId }
+          });
+        });
+      }
+      
+      // Delegate /user_change calls to helper
+      return await postChangeMap(changeMap, pageBlockId, memberId, csrf);
       
     } catch (error) {
       console.error('Error inserting paragraph:', error)
