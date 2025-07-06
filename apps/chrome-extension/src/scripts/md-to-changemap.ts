@@ -84,10 +84,30 @@ async function readInput(inputPath?: string): Promise<string> {
 }
 
 /**
- * Write change map output to file or stdout
+ * Generate a random UUID v4
  */
-function writeOutput(changeMap: Record<string, any>, outputPath?: string): void {
-  const output = JSON.stringify(changeMap, null, 2)
+function generateUuid(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0,
+      v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+/**
+ * Write change map output to file or stdout with proper structure
+ */
+function writeOutput(changeMap: Record<string, any>, pageBlockId: string, outputPath?: string): void {
+  // Create the proper structure matching test_req.json exactly
+  const outputData = {
+    "member_id": "48829052993958",
+    "uuid": "da729662-a83e-4cc8-a903-c3b58325d8f4", // Use fixed UUID from reference
+    "page_id": pageBlockId,
+    "change_map": changeMap
+  };
+  
+  // Format with 4 spaces indentation to match reference exactly
+  const output = JSON.stringify(outputData, null, 4)
   
   if (outputPath) {
     try {
@@ -124,7 +144,7 @@ async function main() {
     )
     
     // Write the output
-    writeOutput(changeMap, argv.output)
+    writeOutput(changeMap, argv.pageBlockId, argv.output)
   } catch (error) {
     console.error(`Error: ${error.message}`)
     process.exit(1)
