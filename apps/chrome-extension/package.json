@@ -27,11 +27,13 @@
   "dependencies": {
     "@dolphin/common": "workspace:^",
     "@dolphin/lark": "workspace:^",
+    "@types/yargs": "^17.0.33",
     "@zip.js/zip.js": "^2.7.53",
     "browser-fs-access": "^0.35.0",
     "filenamify": "^6.0.0",
     "i18next": "^23.16.4",
     "radash": "^12.1.0",
-    "serialize-error": "^12.0.0"
+    "serialize-error": "^12.0.0",
+    "yargs": "^18.0.0"
   }
 }
