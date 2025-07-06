@@ -636,8 +636,27 @@ export function generateChangeMap(
                             } else {
                                 inOrderedList = false;
                             }
-
-                            const textLength = content.length.toString(36);
+                            
+                            // Parse Markdown formatting for list items
+                            const parsed = parseMarkdownFormatting(content, author);
+                            
+                            // Create numToAttrib from formatTypes
+                            const numToAttrib: Record<string, [string, string]> = {
+                                '0': ['author', author]
+                            };
+                            
+                            // Add format types
+                            Object.entries(parsed.formatTypes).forEach(([key, value]) => {
+                                if (key !== '0') { // Skip author attribute
+                                    numToAttrib[key] = value;
+                                }
+                            });
+                            
+                            // Determine seq for ordered list items
+                            let seqValue: string | undefined;
+                            if (type === 'ordered') {
+                                seqValue = inOrderedList ? 'auto' : '1';
+                            }
 
                             changeMap[blockId] = {
                                 id: blockId,
@@ -654,15 +673,17 @@ export function generateChangeMap(
                                                 author: author,
                                                 text: {
                                                     initialAttributedTexts: {
-                                                        text: { '0': content },
-                                                        attribs: { '0': `*0+${textLength}` }
+                                                        text: { '0': parsed.text },
+                                                        attribs: { '0': parsed.attribs }
                                                     },
                                                     apool: {
-                                                        numToAttrib: { '0': ['author', author] },
-                                                        nextNum: 1
+                                                        numToAttrib: numToAttrib,
+                                                        nextNum: Object.keys(numToAttrib).length
                                                     }
                                                 },
+                                                level: 1,
                                                 folded: false,
+                                                ...(seqValue ? { seq: seqValue } : {}),
                                                 parent_id: nodes[blockId].parentId || pageBlockId
                                             }
                                         }
