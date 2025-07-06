@@ -272,30 +272,21 @@ const parseMarkdownFormatting = (text: string, author: string): ParsedText => {
  * Insert paragraphs into the document
  * Handles multi-line text by creating separate paragraph blocks
  */
-const insertParagraph = async (
+const generateChangeMap = (
   pageBlockId: string,
   text: string,
-  memberId: string,
-  csrf: string
-): Promise<boolean> => {
-  try {
-    // Create change map for the text block
-    // @ts-ignore PageMain provided by Lark runtime
-    const PageMain: any = (window as any).PageMain
-    const root = PageMain.blockManager?.rootBlockModel
-    if (!root) {
-      console.error('Cannot access document model')
-      return false
-    }
+  author: string,
+): Record<string, any> => {
 
-    // Get author from document model
-    const author = root.record.snapshot.author || memberId
+      // Combined change map for all sections
+      let changeMap: Record<string, any> = {};
 
+    try {
     // Split text by newlines to create multiple paragraphs
     const paragraphs = text.split(/\r?\n/).filter(p => p.trim().length > 0)
     if (paragraphs.length === 0) {
       console.warn('No valid paragraphs to insert')
-      return false
+      return changeMap
     }
 
     // Split content into chunks of tables and regular paragraphs
@@ -422,8 +413,6 @@ const insertParagraph = async (
     
     // Handle mixed content with multiple sections
     if (sections.length > 0) {
-      // Combined change map for all sections
-      let changeMap: Record<string, any> = {};
       
       // Root level block IDs to insert into the page
       let rootBlockIds: string[] = [];
@@ -848,15 +837,49 @@ const insertParagraph = async (
       };
       
       // Delegate /user_change calls to helper
-      return await postChangeMap(changeMap, pageBlockId, memberId, csrf);
+      return changeMap;
     }
-    
+    return changeMap;
   } catch (error) {
     console.error('Error inserting paragraph:', error)
-    return false
+    return changeMap
   }
 }
 
+
+const insertParagraph = async (
+    pageBlockId: string,
+    text: string,
+    memberId: string,
+    csrf: string
+  ): Promise<boolean> => {
+    try {
+      // Create change map for the text block
+      // @ts-ignore PageMain provided by Lark runtime
+      const PageMain: any = (window as any).PageMain
+      const root = PageMain.blockManager?.rootBlockModel
+      if (!root) {
+        console.error('Cannot access document model')
+        return false
+      }
+  
+      // Get author from document model
+      const author = root.record.snapshot.author || memberId
+  
+      const changeMap = generateChangeMap(pageBlockId,text,author);
+
+      if(Object.keys(changeMap).length === 0)
+        return false;
+        
+    // Delegate /user_change calls to helper
+    return await postChangeMap(changeMap, pageBlockId, memberId, csrf);
+      
+    } catch (error) {
+      console.error('Error inserting paragraph:', error)
+      return false
+    }
+  }
+  
 /**
  * Generate a UUID v4
  */
