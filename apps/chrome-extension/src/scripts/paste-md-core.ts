@@ -530,6 +530,21 @@ export function generateChangeMap(
                             const cellId = cellIds[rowIdx + 1][colIdx];
                             const len = cellText.length.toString(36);
 
+                            // Parse Markdown formatting for table cells
+                            const parsed = parseMarkdownFormatting(cellText, author);
+                            
+                            // Create numToAttrib from formatTypes
+                            const numToAttrib: Record<string, [string, string]> = {
+                                '0': ['author', author]
+                            };
+                            
+                            // Add format types
+                            Object.entries(parsed.formatTypes).forEach(([key, value]) => {
+                                if (key !== '0') { // Skip author attribute
+                                    numToAttrib[key] = value;
+                                }
+                            });
+                            
                             // Text block
                             changeMap[textId] = {
                                 id: textId,
@@ -545,8 +560,14 @@ export function generateChangeMap(
                                                 revisions: [],
                                                 author: author,
                                                 text: {
-                                                    initialAttributedTexts: { text: { '0': cellText }, attribs: { '0': `*0+${len}` } },
-                                                    apool: { numToAttrib: { '0': ['author', author] }, nextNum: 1 }
+                                                    initialAttributedTexts: {
+                                                        text: { '0': parsed.text },
+                                                        attribs: { '0': parsed.attribs }
+                                                    },
+                                                    apool: {
+                                                        numToAttrib: numToAttrib,
+                                                        nextNum: Object.keys(numToAttrib).length
+                                                    }
                                                 },
                                                 folded: false,
                                                 align: 'left',
