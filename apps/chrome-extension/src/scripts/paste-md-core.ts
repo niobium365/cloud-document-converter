@@ -175,6 +175,7 @@ export function generateChangeMap(
     pageBlockId: string,
     text: string,
     author: string,
+    insertPosition: number,
 ): Record<string, any> {
 
     // Combined change map for all sections
@@ -387,8 +388,6 @@ export function generateChangeMap(
             // Root level block IDs to insert into the page
             let rootBlockIds: string[] = [];
 
-            // Position to insert blocks
-            const insertPosition = 0;
 
             // Process each section
             sections.forEach((section, sectionIndex) => {
