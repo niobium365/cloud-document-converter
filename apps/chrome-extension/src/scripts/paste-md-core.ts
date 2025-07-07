@@ -905,12 +905,15 @@ export function generateChangeMap(
                         
                         // Add equation subType operation if equations are present
                         if (parsed.equationData) {
-                            // Convert text length to hex for easysync format
-                            const textLengthHex = parsed.text.length.toString(16);
+                            // Convert text length to base36 for easysync format
+                            const textLengthBase36 = parsed.text.length.toString(36);
+                            
+                            // Get the length of the equation content
+                            const equationLength = parsed.equationData.length.toString(36);
                             
                             // Create the exact format string needed for zone_changesets
                             // Format: Z:length>0=startPos*0*1*2=equationLength$
-                            const formatString = `Z:${textLengthHex}>0=${parsed.equationData.startPos}*0*1*2=${parsed.equationData.length}$`;
+                            const formatString = `Z:${textLengthBase36}>0=${parsed.equationData.startPos}*0*1*2=${equationLength}$`;
                             
                             // Add an operation to set the subType for easysync
                             baseOps.push({
@@ -1058,11 +1061,11 @@ export function generateChangeMap(
                             // Add equation subType operation if equations are present
                             if (parsed.equationData) {
                                 // Convert text length to hex for easysync format
-                                const textLengthHex = parsed.text.length.toString(16);
+                                const textLengthHex = parsed.text.length.toString(36);
                                 
                                 // Create the exact format string needed for zone_changesets
                                 // Format: Z:length>0=startPos*0*1*2=equationLength$
-                                const formatString = `Z:${textLengthHex}>0=${parsed.equationData.startPos}*0*1*2=${parsed.equationData.length}$`;
+                                const formatString = `Z:${textLengthHex}>0=${parsed.equationData.startPos.toString(36)}*0*1*2=${parsed.equationData.length.toString(36)}$`;
                                 
                                 // Add an operation to set the subType for easysync
                                 baseOps.push({
@@ -1135,11 +1138,11 @@ export function generateChangeMap(
                             // Add equation subType operation if equations are present
                             if (parsed.equationData) {
                                 // Convert text length to hex for easysync format
-                                const textLengthHex = parsed.text.length.toString(16);
+                                const textLengthHex = parsed.text.length.toString(36);
                                 
                                 // Create the exact format string needed for zone_changesets
                                 // Format: Z:length>0=startPos*0*1*2=equationLength$
-                                const formatString = `Z:${textLengthHex}>0=${parsed.equationData.startPos}*0*1*2=${parsed.equationData.length}$`;
+                                const formatString = `Z:${textLengthHex}>0=${parsed.equationData.startPos.toString(36)}*0*1*2=${parsed.equationData.length.toString(36)}$`;
                                 
                                 // Add an operation to set the subType for easysync
                                 baseOps.push({
