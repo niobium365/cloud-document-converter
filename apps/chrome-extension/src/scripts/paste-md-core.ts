@@ -206,9 +206,14 @@ export function generateChangeMap(
         };
 
         // Helper function to determine if a line is a code fence start
-        const isCodeFenceStart = (line: string) => {
-            const match = line.match(/^```(\w*)/);
-            return match !== null ? match[1] || 'plain' : null;
+        const isCodeFenceStart = (line: string): string | null => {
+            const match = line.match(/^```([a-zA-Z0-9]*)/);
+            return match ? (match[1] || 'text') : null;
+        };
+        
+        // Helper function to determine if this is a mermaid diagram
+        const isMermaidDiagram = (language: string): boolean => {
+            return language.toLowerCase() === 'mermaid';
         };
 
         // Helper function to determine if a line is a code fence end
@@ -391,54 +396,90 @@ export function generateChangeMap(
                     // Process code block section
                     const codeContent = section.content.join('\n');
 
-                    // Generate block ID for the code block
-                    const codeBlockId = generateId();
-                    rootBlockIds.push(codeBlockId);
-
-                    // Create code block in change map
-                    changeMap[codeBlockId] = {
-                        id: codeBlockId,
-                        version: 0,
-                        payload: {
-                            ops: [{
-                                p: [],
-                                action: {
-                                    oi: {
-                                        type: "code",
-                                        children: [],
-                                        comments: [],
-                                        revisions: [],
-                                        author: author,
-                                        text: {
-                                            initialAttributedTexts: {
-                                                text: { '0': codeContent },
-                                                attribs: { '0': `*0|${(codeContent.split('\n').length - 1).toString(36)}+${codeContent.length.toString(36)}` }
+                    // Generate block ID
+                    const blockId = generateId();
+                    rootBlockIds.push(blockId);
+                    
+                    // Check if this is a mermaid diagram
+                    if (isMermaidDiagram(section.language || '')) {
+                        // Create mermaid diagram (isv) block
+                        changeMap[blockId] = {
+                            id: blockId,
+                            version: 0,
+                            payload: {
+                                ops: [{
+                                    p: [],
+                                    action: {
+                                        oi: {
+                                            type: "isv",
+                                            children: [],
+                                            comments: [],
+                                            revisions: [],
+                                            author: author,
+                                            data: {
+                                                data: codeContent,
+                                                theme: "default",
+                                                view: "chart"
                                             },
-                                            apool: {
-                                                numToAttrib: { '0': ['author', author] },
-                                                nextNum: 1
-                                            }
-                                        },
-                                        language: section.language,
-                                        wrap: false,
-                                        caption: {
+                                            parent_id: pageBlockId,
+                                            app_block_id: "",
+                                            block_type_id: "blk_631fefbbae02400430b8f9f4",
+                                            manifest: {
+                                                view_type: "block_h5",
+                                                app_version: "0.0.100"
+                                            },
+                                            comment_details: {}
+                                        }
+                                    }
+                                }]
+                            }
+                        };
+                    } else {
+                        // Create regular code block
+                        changeMap[blockId] = {
+                            id: blockId,
+                            version: 0,
+                            payload: {
+                                ops: [{
+                                    p: [],
+                                    action: {
+                                        oi: {
+                                            type: "code",
+                                            children: [],
+                                            comments: [],
+                                            revisions: [],
+                                            author: author,
                                             text: {
                                                 initialAttributedTexts: {
-                                                    text: { '0': '\n' },
-                                                    attribs: { '0': '|1+1' }
+                                                    text: { '0': codeContent },
+                                                    attribs: { '0': `*0|${(codeContent.split('\n').length - 1).toString(36)}+${codeContent.length.toString(36)}` }
                                                 },
                                                 apool: {
-                                                    numToAttrib: {},
-                                                    nextNum: 0
+                                                    numToAttrib: { '0': ['author', author] },
+                                                    nextNum: 1
                                                 }
-                                            }
-                                        },
-                                        parent_id: pageBlockId
+                                            },
+                                            language: section.language,
+                                            wrap: false,
+                                            caption: {
+                                                text: {
+                                                    initialAttributedTexts: {
+                                                        text: { '0': '\n' },
+                                                        attribs: { '0': '|1+1' }
+                                                    },
+                                                    apool: {
+                                                        numToAttrib: {},
+                                                        nextNum: 0
+                                                    }
+                                                }
+                                            },
+                                            parent_id: pageBlockId
+                                        }
                                     }
-                                }
-                            }]
-                        }
-                    };
+                                }]
+                            }
+                        };
+                    }
                 } else if (section.type === 'hr') {
                     // Process horizontal rule section
                     const hrBlockId = generateId();
