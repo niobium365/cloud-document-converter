@@ -55,34 +55,94 @@ function buildNodesHierarchy(ids: string[], indentLevels: number[]): { nodes: Re
 // Helper function to parse Markdown formatting
 type FormattingType = 'bold' | 'italic' | 'strikethrough';
 
+// Helper function to generate an object ID for equations
+function generateObjectId(): string {
+    // This follows the Lark pattern of generating 8-character IDs
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
 interface TextSegment {
     text: string;
     formats: FormattingType[];
+    equation?: string; // For equation content
+    objectId?: string; // Unique ID for the equation
 }
 
 interface ParsedText {
     text: string;
     attribs: string;
     formatTypes: Record<string, [string, string]>;
+    equationData?: {
+        equation: string;
+        objectId: string;
+        startPos: number;
+        length: number;
+    };
 }
 
 
 const parseMarkdownFormatting = (text: string, author: string): ParsedText => {
-    // Initialize the result
+    // Prepare result structure
     const result: ParsedText = {
-        text: text,
+        text,
         attribs: '',
         formatTypes: {
-            // Start with author attribute
             '0': ['author', author]
         }
     };
 
-    // If there's no special formatting, return simple format
-    if (!text.includes('**') && !text.includes('*') && !text.includes('~~')) {
+    // If there's no special formatting or equations, return simple format
+    if (!text.includes('**') && !text.includes('*') && !text.includes('~~') && !text.includes('$')) {
         result.attribs = `*0+${text.length.toString(36)}`;
         return result;
     }
+    
+    // Handle equations first - they should be processed separately from other formatting
+    const equationRegex = /\$(.*?)\$/g;
+    let matches: RegExpExecArray | null;
+    let lastIndex = 0;
+    let equationSegments: TextSegment[] = [];
+    
+    // Process all equation segments
+    while ((matches = equationRegex.exec(text)) !== null) {
+        const beforeText = text.substring(lastIndex, matches.index);
+        if (beforeText) {
+            equationSegments.push({
+                text: beforeText,
+                formats: []
+            });
+        }
+        
+        // Generate a unique objectID for this equation
+        const objectId = generateObjectId();
+        
+        // Add equation with special attributes
+        equationSegments.push({
+            text: matches[1], // The equation content without $ markers
+            formats: [],
+            equation: matches[1],
+            objectId: objectId
+        });
+        
+        lastIndex = matches.index + matches[0].length;
+    }
+    
+    // Add any remaining text after the last equation
+    const remainingText = text.substring(lastIndex);
+    if (remainingText || equationSegments.length === 0) {
+        equationSegments.push({
+            text: remainingText || text,
+            formats: []
+        });
+    }
+    
+    // If no equations were found, process normally
+    let segments = equationSegments.length > 1 ? equationSegments : [{ text: text, formats: [] }];
 
     // Format markers and their corresponding attribute types
     const formatMarkers = [
@@ -91,8 +151,6 @@ const parseMarkdownFormatting = (text: string, author: string): ParsedText => {
         { marker: '~~', type: 'strikethrough' }
     ];
 
-    // Split the text into segments based on the Markdown formatting
-    let segments: TextSegment[] = [{ text: text, formats: [] }];
 
     // Process each format marker
     for (const { marker, type } of formatMarkers) {
@@ -135,25 +193,62 @@ const parseMarkdownFormatting = (text: string, author: string): ParsedText => {
         segments = newSegments;
     }
 
-    // Combine all segments into a single text
+    // Process segments into attributed text format
     let plainText = '';
     let attribs = '';
-    let nextNum = 1; // Start from 1 since 0 is reserved for author
+    let nextNum = 1;
     const formatTypeMap: Record<string, number> = {};
 
     for (const segment of segments) {
+        const startPos = plainText.length;
         plainText += segment.text;
 
-        // Create attribute string for this segment
-        let segAttrib = '*0'; // Always include author
+        // Start with author attribute
+        let segAttrib = '*0';
 
-        // Add format attributes
+        // Add formatting attribute identifiers
         for (const format of segment.formats) {
+            // Add format attribute if needed
             if (!formatTypeMap[format]) {
                 formatTypeMap[format] = nextNum++;
-                result.formatTypes[formatTypeMap[format].toString()] = [format, 'true'];
+                result.formatTypes[formatTypeMap[format].toString()] = [format, ''];
             }
             segAttrib += `*${formatTypeMap[format]}`;
+        }
+        
+        // Add equation attributes if this is an equation segment
+        if (segment.equation) {
+            // Add equation attribute
+            if (!formatTypeMap['equation']) {
+                formatTypeMap['equation'] = nextNum++;
+                result.formatTypes[formatTypeMap['equation'].toString()] = ['equation', segment.equation];
+            } else {
+                // Update the equation value for this specific equation
+                result.formatTypes[formatTypeMap['equation'].toString()][1] = segment.equation;
+            }
+            segAttrib += `*${formatTypeMap['equation']}`;
+            
+            // Add objectID attribute
+            if (segment.objectId) {
+                if (!formatTypeMap['objectID']) {
+                    formatTypeMap['objectID'] = nextNum++;
+                    result.formatTypes[formatTypeMap['objectID'].toString()] = ['objectID', segment.objectId];
+                } else {
+                    // Update the objectID value for this specific equation
+                    result.formatTypes[formatTypeMap['objectID'].toString()][1] = segment.objectId;
+                }
+                segAttrib += `*${formatTypeMap['objectID']}`;
+            }
+            
+            // Store information for easysync format
+            if (!result.equationData) {
+                result.equationData = {
+                    equation: segment.equation,
+                    objectId: segment.objectId || '',
+                    startPos: plainText.length - segment.text.length,
+                    length: segment.text.length
+                };
+            }
         }
 
         // Add length in base36
@@ -779,34 +874,68 @@ export function generateChangeMap(
                         const parsed = parseMarkdownFormatting(paragraph, author);
                         const textId = textBlockIds[index];
                         
+                        // Create base blockquote text block
+                        const blockquoteTextBlock = {
+                            type: "text",
+                            children: [],
+                            comments: [],
+                            revisions: [],
+                            author: author,
+                            text: {
+                                initialAttributedTexts: {
+                                    text: { "0": parsed.text },
+                                    attribs: { "0": parsed.attribs }
+                                },
+                                apool: {
+                                    numToAttrib: parsed.formatTypes,
+                                    nextNum: Object.keys(parsed.formatTypes).length
+                                }
+                            },
+                            folded: false,
+                            parent_id: blockquoteContainerId
+                        };
+                        
+                        // Create the base ops for the blockquote text block
+                        const baseOps = [{
+                            p: [],
+                            action: {
+                                oi: blockquoteTextBlock
+                            }
+                        }];
+                        
+                        // Add equation subType operation if equations are present
+                        if (parsed.equationData) {
+                            // Convert text length to hex for easysync format
+                            const textLengthHex = parsed.text.length.toString(16);
+                            
+                            // Create the exact format string needed for zone_changesets
+                            // Format: Z:length>0=startPos*0*1*2=equationLength$
+                            const formatString = `Z:${textLengthHex}>0=${parsed.equationData.startPos}*0*1*2=${parsed.equationData.length}$`;
+                            
+                            // Add an operation to set the subType for easysync
+                            baseOps.push({
+                                p: ['text'],
+                                subType: {
+                                    t: 'easysync',
+                                    o: {
+                                        zone_changesets: {
+                                            0: formatString
+                                        },
+                                        apool: {
+                                            numToAttrib: parsed.formatTypes,
+                                            nextNum: Object.keys(parsed.formatTypes).length
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        
+                        // Create the change map entry
                         changeMap[textId] = {
                             id: textId,
                             version: 0,
                             payload: {
-                                ops: [{
-                                    p: [],
-                                    action: {
-                                        oi: {
-                                            type: "text",
-                                            children: [],
-                                            comments: [],
-                                            revisions: [],
-                                            author: author,
-                                            text: {
-                                                initialAttributedTexts: {
-                                                    text: { "0": parsed.text },
-                                                    attribs: { "0": parsed.attribs }
-                                                },
-                                                apool: {
-                                                    numToAttrib: parsed.formatTypes,
-                                                    nextNum: Object.keys(parsed.formatTypes).length
-                                                }
-                                            },
-                                            folded: false,
-                                            parent_id: blockquoteContainerId
-                                        }
-                                    }
-                                }]
+                                ops: baseOps
                             }
                         };
                     });
@@ -898,36 +1027,67 @@ export function generateChangeMap(
                                 seqValue = inOrderedList ? 'auto' : '1';
                             }
 
+                            // Create the base ops for the list item
+                            const baseOps = [{
+                                p: [],
+                                action: {
+                                    oi: {
+                                        type: type,
+                                        children: nodes[blockId].children || [],
+                                        comments: [],
+                                        revisions: [],
+                                        author: author,
+                                        text: {
+                                            initialAttributedTexts: {
+                                                text: { '0': parsed.text },
+                                                attribs: { '0': parsed.attribs }
+                                            },
+                                            apool: {
+                                                numToAttrib: numToAttrib,
+                                                nextNum: Object.keys(numToAttrib).length
+                                            }
+                                        },
+                                        level: 1,
+                                        folded: false,
+                                        ...(seqValue ? { seq: seqValue } : {}),
+                                        parent_id: nodes[blockId].parentId || pageBlockId
+                                    }
+                                }
+                            }];
+                            
+                            // Add equation subType operation if equations are present
+                            if (parsed.equationData) {
+                                // Convert text length to hex for easysync format
+                                const textLengthHex = parsed.text.length.toString(16);
+                                
+                                // Create the exact format string needed for zone_changesets
+                                // Format: Z:length>0=startPos*0*1*2=equationLength$
+                                const formatString = `Z:${textLengthHex}>0=${parsed.equationData.startPos}*0*1*2=${parsed.equationData.length}$`;
+                                
+                                // Add an operation to set the subType for easysync
+                                baseOps.push({
+                                    p: ['text'],
+                                    subType: {
+                                        t: 'easysync',
+                                        o: {
+                                            zone_changesets: {
+                                                0: formatString
+                                            },
+                                            apool: {
+                                                numToAttrib: numToAttrib,
+                                                nextNum: Object.keys(numToAttrib).length
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            
+                            // Create the change map entry
                             changeMap[blockId] = {
                                 id: blockId,
                                 version: 0,
                                 payload: {
-                                    ops: [{
-                                        p: [],
-                                        action: {
-                                            oi: {
-                                                type: type,
-                                                children: nodes[blockId].children || [],
-                                                comments: [],
-                                                revisions: [],
-                                                author: author,
-                                                text: {
-                                                    initialAttributedTexts: {
-                                                        text: { '0': parsed.text },
-                                                        attribs: { '0': parsed.attribs }
-                                                    },
-                                                    apool: {
-                                                        numToAttrib: numToAttrib,
-                                                        nextNum: Object.keys(numToAttrib).length
-                                                    }
-                                                },
-                                                level: 1,
-                                                folded: false,
-                                                ...(seqValue ? { seq: seqValue } : {}),
-                                                parent_id: nodes[blockId].parentId || pageBlockId
-                                            }
-                                        }
-                                    }]
+                                    ops: baseOps
                                 }
                             };
                         } else {
@@ -946,34 +1106,65 @@ export function generateChangeMap(
                                 }
                             });
 
+                            // Create the base ops for the paragraph
+                            const baseOps = [{
+                                p: [],
+                                action: {
+                                    oi: {
+                                        type: 'text',
+                                        children: nodes[blockId].children || [],
+                                        comments: [],
+                                        revisions: [],
+                                        author: author,
+                                        text: {
+                                            initialAttributedTexts: {
+                                                text: { '0': parsed.text },
+                                                attribs: { '0': parsed.attribs }
+                                            },
+                                            apool: {
+                                                numToAttrib: numToAttrib,
+                                                nextNum: Object.keys(numToAttrib).length
+                                            }
+                                        },
+                                        folded: false,
+                                        parent_id: nodes[blockId].parentId || pageBlockId
+                                    }
+                                }
+                            }];
+                            
+                            // Add equation subType operation if equations are present
+                            if (parsed.equationData) {
+                                // Convert text length to hex for easysync format
+                                const textLengthHex = parsed.text.length.toString(16);
+                                
+                                // Create the exact format string needed for zone_changesets
+                                // Format: Z:length>0=startPos*0*1*2=equationLength$
+                                const formatString = `Z:${textLengthHex}>0=${parsed.equationData.startPos}*0*1*2=${parsed.equationData.length}$`;
+                                
+                                // Add an operation to set the subType for easysync
+                                baseOps.push({
+                                    p: ['text'],
+                                    subType: {
+                                        t: 'easysync',
+                                        o: {
+                                            zone_changesets: {
+                                                0: formatString
+                                            },
+                                            apool: {
+                                                numToAttrib: numToAttrib,
+                                                nextNum: Object.keys(numToAttrib).length
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            
+                            // Create the change map entry
                             changeMap[blockId] = {
                                 id: blockId,
                                 version: 0,
                                 payload: {
-                                    ops: [{
-                                        p: [],
-                                        action: {
-                                            oi: {
-                                                type: 'text',
-                                                children: nodes[blockId].children || [],
-                                                comments: [],
-                                                revisions: [],
-                                                author: author,
-                                                text: {
-                                                    initialAttributedTexts: {
-                                                        text: { '0': parsed.text },
-                                                        attribs: { '0': parsed.attribs }
-                                                    },
-                                                    apool: {
-                                                        numToAttrib: numToAttrib,
-                                                        nextNum: Object.keys(numToAttrib).length
-                                                    }
-                                                },
-                                                folded: false,
-                                                parent_id: nodes[blockId].parentId || pageBlockId
-                                            }
-                                        }
-                                    }]
+                                    ops: baseOps
                                 }
                             };
                         }
