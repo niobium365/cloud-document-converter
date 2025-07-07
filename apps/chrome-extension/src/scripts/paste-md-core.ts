@@ -1279,6 +1279,12 @@ export function generateChangeMap(
                                     };
                                     
                                     blockIdsToAdd.push(afterId);
+
+                                    // Replace the original paragraph blockId with new blocks in rootBlockIds
+                                    const rootIndex = rootBlockIds.indexOf(blockId);
+                                    if (rootIndex !== -1) {
+                                        rootBlockIds.splice(rootIndex, 1, ...blockIdsToAdd);
+                                    }
                                 }
                                 
                                 // Find and update the parent's children to include our new blocks
@@ -1392,7 +1398,8 @@ export function generateChangeMap(
             const parentOps: Array<{ p: (string | number)[], action: { li: string } | { ld: string } }> = [];
 
             // Insert root-level items in reverse so order is preserved
-            rootBlockIds.slice().reverse().forEach(rootId => {
+            const validRootBlockIds = rootBlockIds.filter(id => changeMap[id] !== undefined);
+            validRootBlockIds.slice().reverse().forEach(rootId => {
                 parentOps.push({ p: ['children', insertPosition], action: { li: rootId } });
             });
 
