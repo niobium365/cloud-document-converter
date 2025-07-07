@@ -82,6 +82,8 @@ interface ParsedText {
         objectId: string;
         startPos: number;
         length: number;
+        isCentered?: boolean;
+        fullMatch?: string;
     };
 }
 
@@ -95,6 +97,32 @@ const parseMarkdownFormatting = (text: string, author: string): ParsedText => {
             '0': ['author', author]
         }
     };
+    
+    // First check for centered equations with $$...$$ pattern
+    const centeredEquationRegex = /\$\$(.*?)\$\$/g;
+    const centeredMatch = centeredEquationRegex.exec(text);
+    
+    if (centeredMatch) {
+        // We found a centered equation - special handling
+        const equationContent = centeredMatch[1];
+        const objectId = generateObjectId();
+        
+        // Store equation metadata for special handling during block creation
+        result.formatTypes['1'] = ['equation', equationContent];
+        result.formatTypes['2'] = ['objectID', objectId];
+        
+        // Store equation data for centering and special handling
+        result.equationData = {
+            equation: equationContent,
+            objectId: objectId,
+            startPos: centeredMatch.index,
+            length: equationContent.length,
+            isCentered: true,
+            fullMatch: centeredMatch[0]
+        };
+        
+        return result;
+    }
 
     // If there's no special formatting or equations, return simple format
     if (!text.includes('**') && !text.includes('*') && !text.includes('~~') && !text.includes('$')) {
@@ -1097,6 +1125,191 @@ export function generateChangeMap(
                             // Handle regular paragraphs with markdown formatting
                             const parsed = parseMarkdownFormatting(content, author);
 
+                            // Check if this paragraph contains a centered equation ($$...$$)
+                            if (parsed.equationData && parsed.equationData.isCentered) {
+                                // For centered equations, we need special handling
+                                const equationContent = parsed.equationData.equation;
+                                const objectId = parsed.equationData.objectId;
+                                const startPos = parsed.equationData.startPos;
+                                const fullMatch = parsed.equationData.fullMatch;
+                                
+                                // Create an array to hold the IDs of blocks to add
+                                const blockIdsToAdd = [];
+                                
+                                // Split the content around the centered equation
+                                const beforeText = content.substring(0, startPos);
+                                const afterText = content.substring(startPos + fullMatch.length);
+                                
+                                // Generate IDs for new blocks
+                                const beforeId = beforeText ? generateId() : null;
+                                const equationId = generateId();
+                                const afterId = afterText ? generateId() : null;
+                                
+                                // Create a block for text before the equation if needed
+                                if (beforeText.trim()) {
+                                    const beforeOps = [{
+                                        p: [],
+                                        action: {
+                                            oi: {
+                                                type: 'text',
+                                                children: [],
+                                                comments: [],
+                                                revisions: [],
+                                                author: author,
+                                                text: {
+                                                    initialAttributedTexts: {
+                                                        text: { '0': beforeText },
+                                                        attribs: { '0': `*0+${beforeText.length.toString(36)}` }
+                                                    },
+                                                    apool: {
+                                                        numToAttrib: { '0': ['author', author] },
+                                                        nextNum: 1
+                                                    }
+                                                },
+                                                folded: false,
+                                                parent_id: nodes[blockId].parentId || pageBlockId
+                                            }
+                                        }
+                                    }];
+                                    
+                                    changeMap[beforeId] = {
+                                        id: beforeId,
+                                        version: 0,
+                                        payload: {
+                                            ops: beforeOps
+                                        }
+                                    };
+                                    
+                                    blockIdsToAdd.push(beforeId);
+                                }
+                                
+                                // Create the centered equation block
+                                const equationNumToAttrib = {
+                                    '0': ['author', author],
+                                    '1': ['equation', equationContent],
+                                    '2': ['objectID', objectId]
+                                };
+                                
+                                const equationOps = [{
+                                    p: [],
+                                    action: {
+                                        oi: {
+                                            type: 'text',
+                                            children: [],
+                                            comments: [],
+                                            revisions: [],
+                                            author: author,
+                                            text: {
+                                                initialAttributedTexts: {
+                                                    text: { '0': ' ' },  // Single space for centered equations
+                                                    attribs: { '0': '*0*1*2+1' }  // Apply all attributes
+                                                },
+                                                apool: {
+                                                    numToAttrib: equationNumToAttrib,
+                                                    nextNum: 3
+                                                }
+                                            },
+                                            folded: false,
+                                            parent_id: nodes[blockId].parentId || pageBlockId,
+                                            align: 'center'  // Set alignment to center
+                                        }
+                                    }
+                                }];
+                                
+                                // Add easysync subType for the centered equation
+                                equationOps.push({
+                                    p: ['text'],
+                                    subType: {
+                                        t: 'easysync',
+                                        o: {
+                                            zone_changesets: {
+                                                '0': 'Z:1>0*0*1*2=1$'  // Fixed format for centered equations
+                                            },
+                                            apool: {
+                                                numToAttrib: equationNumToAttrib,
+                                                nextNum: 3
+                                            }
+                                        }
+                                    }
+                                });
+                                
+                                changeMap[equationId] = {
+                                    id: equationId,
+                                    version: 0,
+                                    payload: {
+                                        ops: equationOps
+                                    }
+                                };
+                                
+                                blockIdsToAdd.push(equationId);
+                                
+                                // Create a block for text after the equation if needed
+                                if (afterText.trim()) {
+                                    const afterOps = [{
+                                        p: [],
+                                        action: {
+                                            oi: {
+                                                type: 'text',
+                                                children: [],
+                                                comments: [],
+                                                revisions: [],
+                                                author: author,
+                                                text: {
+                                                    initialAttributedTexts: {
+                                                        text: { '0': afterText },
+                                                        attribs: { '0': `*0+${afterText.length.toString(36)}` }
+                                                    },
+                                                    apool: {
+                                                        numToAttrib: { '0': ['author', author] },
+                                                        nextNum: 1
+                                                    }
+                                                },
+                                                folded: false,
+                                                parent_id: nodes[blockId].parentId || pageBlockId
+                                            }
+                                        }
+                                    }];
+                                    
+                                    changeMap[afterId] = {
+                                        id: afterId,
+                                        version: 0,
+                                        payload: {
+                                            ops: afterOps
+                                        }
+                                    };
+                                    
+                                    blockIdsToAdd.push(afterId);
+                                }
+                                
+                                // Find and update the parent's children to include our new blocks
+                                const parentId = nodes[blockId].parentId || pageBlockId;
+                                if (parentId && changeMap[parentId] && changeMap[parentId].payload && changeMap[parentId].payload.ops) {
+                                    // Find the position of the original block
+                                    const parentOps = changeMap[parentId].payload.ops;
+                                    const childOpIndex = parentOps.findIndex(op => 
+                                        op.p && op.p[0] === 'children' && 
+                                        op.action && op.action.li === blockId
+                                    );
+                                    
+                                    if (childOpIndex !== -1) {
+                                        // Remove the original block reference
+                                        parentOps.splice(childOpIndex, 1);
+                                        
+                                        // Add our new blocks in its place
+                                        blockIdsToAdd.forEach((id, idx) => {
+                                            parentOps.push({
+                                                p: ['children', childOpIndex + idx],
+                                                action: { li: id }
+                                            });
+                                        });
+                                    }
+                                }
+                                
+                                // Skip normal block creation since we've handled this specially
+                                return;
+                            }
+                            
+                            // For regular paragraphs without centered equations
                             // Create numToAttrib from formatTypes
                             const numToAttrib: Record<string, [string, string]> = {
                                 '0': ['author', author]
