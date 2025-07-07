@@ -41,7 +41,7 @@ const argv = yargs(hideBin(process.argv))
     alias: 'a',
     type: 'string',
     description: 'Author ID',
-    default: '0'
+    default: '6955273262934802433'
   })
   .option('output', {
     alias: 'o',
@@ -140,7 +140,8 @@ async function main() {
     const changeMap = generateChangeMap(
       argv.pageBlockId,
       markdownContent,
-      argv.author || '0'
+      argv.author || '6955273262934802433',
+      0
     )
     
     // Write the output
