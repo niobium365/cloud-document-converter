@@ -72,14 +72,15 @@ export function generateChangeMap(
 
   const ast = unified().use(remarkParse).parse(markdown) as Root;
 
-    ast.children.reverse().forEach(node => {
-    processNode(node, pageBlockId, changeMap, author);
+  const isSimpleParagraphs = ast.children.every(n => n.type === 'paragraph');
+  ast.children.forEach(node => {
+    processNode(node, pageBlockId, changeMap, author, {}, isSimpleParagraphs);
   });
 
   return changeMap;
 }
 
-function processNode(node: Content, parentId: string, changeMap: ChangeMap, author: string, listInfo: { type?: 'ordered' | 'bullet', level?: number, seq?: string } = {}) {
+function processNode(node: Content, parentId: string, changeMap: ChangeMap, author: string, listInfo: { type?: 'ordered' | 'bullet', level?: number, seq?: string } = {}, isStandaloneParagraph: boolean = false) {
   const blockId = generateId();
 
   switch (node.type) {
@@ -87,7 +88,7 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
       createHeadingBlock(blockId, parentId, node, changeMap, author);
       break;
     case 'paragraph':
-      processParagraph(blockId, parentId, node, changeMap, author);
+      processParagraph(blockId, parentId, node, changeMap, author, isStandaloneParagraph);
       break;
     case 'list':
       node.children.forEach((item, index) => {
@@ -102,8 +103,12 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
       createTableBlock(blockId, parentId, node, changeMap, author);
       break;
     case 'code':
-      createCodeBlock(blockId, parentId, node, changeMap, author);
-      break;
+          if (node.lang === 'mermaid') {
+            createMermaidBlock(blockId, parentId, node, changeMap, author);
+          } else {
+            createCodeBlock(blockId, parentId, node, changeMap, author);
+          }
+          break;
     case 'thematicBreak':
       createDividerBlock(blockId, parentId, changeMap);
       break;
@@ -115,6 +120,9 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
 
 function createTextBlockData(content: TextProcessingResult, author: string) {
     return {
+        author: author,
+        cols: 0,
+        rows: 0,
         text: {
             initialAttributedTexts: {
                 text: { '0': content.text },
@@ -125,7 +133,6 @@ function createTextBlockData(content: TextProcessingResult, author: string) {
                 nextNum: Object.keys(content.formatTypes).length,
             },
         },
-        author,
     };
 }
 
@@ -154,15 +161,16 @@ function createListItemBlock(blockId: string, parentId: string, node: ListItem, 
 
     const block = {
         obj_id: blockId,
-        parent_id: parentId,
         type: listInfo.type,
         children: [],
         comments: [],
         revisions: [],
-        folded: false,
-        ...textData,
+        author: textData.author,
+        text: textData.text,
         level: listInfo.level,
+        folded: false,
         seq: listInfo.seq,
+        parent_id: parentId,
     };
     addBlockToChangeMap(block, changeMap, parentId);
 
@@ -239,18 +247,41 @@ function createDividerBlock(blockId: string, parentId: string, changeMap: Change
   addBlockToChangeMap(block, changeMap, parentId);
 }
 
-function createBlockquote(blockId: string, parentId: string, node: Blockquote, changeMap: ChangeMap, author: string) {
-    const quoteContainerId = generateId();
-    const childrenIds = [];
+function createMermaidBlock(blockId: string, parentId: string, node: Code, changeMap: ChangeMap, author: string) {
+    const mermaidBlock = {
+        obj_id: blockId,
+        type: 'isv',
+        children: [],
+        comments: [],
+        revisions: [],
+        author: author,
+        data: {
+            data: node.value,
+            theme: 'default',
+            view: 'chart',
+        },
+        parent_id: parentId,
+        app_block_id: '',
+        block_type_id: 'blk_631fefbbae02400430b8f9f4',
+        manifest: {
+            view_type: 'block_h5',
+            app_version: '0.0.100',
+        },
+        comment_details: {},
+    };
+    addBlockToChangeMap(mermaidBlock, changeMap, parentId);
+}
 
+function createBlockquote(blockId: string, parentId: string, node: Blockquote, changeMap: ChangeMap, author: string) {
+    const childrenIds = [];
     node.children.forEach(child => {
         const childBlockId = generateId();
         childrenIds.push(childBlockId);
-        processNode({ ...child, temp_id: childBlockId }, quoteContainerId, changeMap, author);
+        processNode({ ...child, temp_id: childBlockId }, blockId, changeMap, author);
     });
 
     const quoteContainer = {
-        obj_id: quoteContainerId,
+        obj_id: blockId,
         parent_id: parentId,
         type: 'quote',
         children: childrenIds,
@@ -258,117 +289,82 @@ function createBlockquote(blockId: string, parentId: string, node: Blockquote, c
     addBlockToChangeMap(quoteContainer, changeMap, parentId);
 }
 
-function processParagraph(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: string) {
-    const rawText = node.children.map(c => (c.type === 'text' ? c.value : c.type === 'inlineCode' ? `$${c.value}$` : '')).join('');
-    const lines = rawText.split('\n').filter(line => line.trim());
-
-    lines.forEach((line, index) => {
-        const currentBlockId = (node as any).temp_id && index === 0 ? (node as any).temp_id : generateId();
-        const centeredEquationRegex = /^\$\$(.*?)\$\$$/;
-        const match = line.trim().match(centeredEquationRegex);
-
-        if (match) {
-            const equationContent = match[1];
-            const objectId = generateObjectId();
-            const equationBlock = {
-                obj_id: currentBlockId,
-                parent_id: parentId,
-                type: 'text',
-                align: 'center',
-                text: {
-                    initialAttributedTexts: {
-                        text: { '0': ' ' },
-                        attribs: { '0': '*0*1*2+1' },
-                    },
-                    apool: {
-                        numToAttrib: {
-                            '0': ['author', author],
-                            '1': ['equation', equationContent],
-                            '2': ['objectID', objectId],
-                        },
-                        nextNum: 3,
-                    }
-                },
-            };
-            addBlockToChangeMap(equationBlock, changeMap, parentId);
+function processParagraph(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: string, isStandalone: boolean) {
+    const newChildren: PhrasingContent[] = [];
+    node.children.forEach(child => {
+        if (child.type === 'inlineCode') {
+            const value = (child.children[0] as Text).value;
+            newChildren.push({ type: 'inlineEquation', value } as any);
         } else {
-            const tempAst = unified().use(remarkParse).parse(line) as Root;
-            const tempPara = tempAst.children[0] as Paragraph;
-            if (tempPara) {
-                const content = processPhrasingContent(tempPara.children, author);
-                const textData = createTextBlockData(content, author);
-                const block = {
-                    obj_id: currentBlockId,
-                    parent_id: parentId,
-                    type: 'text',
-                    children: [],
-                    comments: [],
-                    revisions: [],
-                    folded: false,
-                    ...textData,
-                };
-                addBlockToChangeMap(block, changeMap, parentId);
-            }
+            newChildren.push(child);
         }
     });
+
+    const content = processPhrasingContent(newChildren, author);
+    const textData = createTextBlockData(content, author);
+
+    if (isStandalone) {
+        const originalInitialAttributedTexts = textData.text.initialAttributedTexts;
+        textData.text.initialAttributedTexts = {
+            cols: {},
+            rows: {},
+            text: originalInitialAttributedTexts.text,
+            attribs: originalInitialAttributedTexts.attribs,
+        };
+    }
+
+    const block = {
+        obj_id: blockId,
+        type: 'text',
+        parent_id: parentId,
+        author,
+        children: [],
+        comments: [],
+        revisions: [],
+        folded: false,
+        text: textData.text,
+    };
+    addBlockToChangeMap(block, changeMap, parentId);
 }
 
 function processPhrasingContent(nodes: PhrasingContent[], author: string): TextProcessingResult {
-  let plainText = '';
-  let attribs = '';
-  const formatTypes: Record<string, [string, string]> = { '0': ['author', author] };
-  let nextNum = 1;
-  const formatTypeMap: Record<string, number> = {};
+    let text = '';
+    let attribs = '';
+    const formatTypes: Record<string, [string, string]> = { '0': ['author', author] };
+    let nextNum = 1;
+    const formatTypeMap: Record<string, number> = {};
 
-  function addFormat(format: string): number {
-    if (!formatTypeMap[format]) {
-      formatTypeMap[format] = nextNum++;
-      formatTypes[formatTypeMap[format].toString()] = [format, 'true'];
-    }
-    return formatTypeMap[format];
-  }
-
-  function traverse(subNodes: PhrasingContent[], activeFormats: string[]) {
-    for (const node of subNodes) {
-      let currentFormats = [...activeFormats];
-      if (node.type === 'strong') {
-        currentFormats.push('bold');
-        traverse(node.children, currentFormats);
-      } else if (node.type === 'emphasis') {
-        currentFormats.push('italic');
-        traverse(node.children, currentFormats);
-      } else if (node.type === 'delete') {
-        currentFormats.push('strikethrough');
-        traverse(node.children, currentFormats);
-      } else if (node.type === 'inlineCode') {
-        const equationContent = node.value;
-        const objectId = generateObjectId();
-        
-        plainText += equationContent;
-        
-        const equationFormatNum = nextNum++;
-        formatTypes[equationFormatNum.toString()] = ['equation', equationContent];
-        const objectIdFormatNum = nextNum++;
-        formatTypes[objectIdFormatNum.toString()] = ['objectID', objectId];
-        
-        let segAttrib = `*0*${equationFormatNum}*${objectIdFormatNum}`;
-        segAttrib += `+${equationContent.length.toString(36)}`;
-        attribs += segAttrib;
-
-      } else if (node.type === 'text') {
-        if (!node.value) continue;
-        plainText += node.value;
-        let segAttrib = '*0';
-        for (const format of currentFormats) {
-          segAttrib += `*${addFormat(format)}`;
+    function addFormat(type: string, value: string): number {
+        const key = `${type},${value}`;
+        if (formatTypeMap[key] !== undefined) {
+            return formatTypeMap[key];
         }
-        segAttrib += `+${node.value.length.toString(36)}`;
-        attribs += segAttrib;
-      }
+        const num = nextNum++;
+        formatTypes[num.toString()] = [type, value];
+        formatTypeMap[key] = num;
+        return num;
     }
-  }
 
-  traverse(nodes, []);
+    function traverse(subNodes: PhrasingContent[], activeFormats: number[]) {
+        subNodes.forEach(node => {
+            if (node.type === 'text') {
+                text += node.value;
+                attribs += `*${activeFormats.join('*')}+${node.value.length.toString(36)}`;
+            } else if ((node.type as any) === 'inlineEquation') {
+                const equationContent = (node as any).value;
+                const equationNum = addFormat('equation', equationContent);
+                const objectIdNum = addFormat('objectID', generateObjectId());
+                const equationFormats = [...activeFormats, equationNum, objectIdNum].sort((a, b) => a - b);
+                text += equationContent;
+                attribs += `*${equationFormats.join('*')}+${equationContent.length.toString(36)}`;
+            } else if (['strong', 'emphasis', 'delete'].includes(node.type)) {
+                const formatMap = { strong: 'b', emphasis: 'i', delete: 's' };
+                const formatNum = addFormat(formatMap[node.type], 'true');
+                traverse(node.children, [...activeFormats, formatNum].sort((a, b) => a - b));
+            }
+        });
+    }
 
-  return { text: plainText, attribs, formatTypes };
+    traverse(nodes, [0]);
+    return { text, attribs, formatTypes };
 }
