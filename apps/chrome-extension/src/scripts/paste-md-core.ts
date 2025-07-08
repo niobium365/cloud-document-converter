@@ -948,21 +948,21 @@ export function generateChangeMap(
                             const formatString = `Z:${textLengthBase36}>0=${parsed.equationData.startPos}*0*1*2=${equationLength}$`;
                             
                             // Add an operation to set the subType for easysync
-                            baseOps.push({
-                                p: ['text'],
-                                subType: {
-                                    t: 'easysync',
-                                    o: {
-                                        zone_changesets: {
-                                            0: formatString
-                                        },
-                                        apool: {
-                                            numToAttrib: parsed.formatTypes,
-                                            nextNum: Object.keys(parsed.formatTypes).length
-                                        }
-                                    }
-                                }
-                            });
+                            // baseOps.push({
+                            //     p: ['text'],
+                            //     subType: {
+                            //         t: 'easysync',
+                            //         o: {
+                            //             zone_changesets: {
+                            //                 0: formatString
+                            //             },
+                            //             apool: {
+                            //                 numToAttrib: parsed.formatTypes,
+                            //                 nextNum: Object.keys(parsed.formatTypes).length
+                            //             }
+                            //         }
+                            //     }
+                            // });
                         }
                         
                         // Create the change map entry
@@ -1100,21 +1100,21 @@ export function generateChangeMap(
                                 const formatString = `Z:${textLengthHex}>0=${parsed.equationData.startPos.toString(36)}*0*1*2=${parsed.equationData.length.toString(36)}$`;
                                 
                                 // Add an operation to set the subType for easysync
-                                baseOps.push({
-                                    p: ['text'],
-                                    subType: {
-                                        t: 'easysync',
-                                        o: {
-                                            zone_changesets: {
-                                                0: formatString
-                                            },
-                                            apool: {
-                                                numToAttrib: numToAttrib,
-                                                nextNum: Object.keys(numToAttrib).length
-                                            }
-                                        }
-                                    }
-                                });
+                                // baseOps.push({
+                                //     p: ['text'],
+                                //     subType: {
+                                //         t: 'easysync',
+                                //         o: {
+                                //             zone_changesets: {
+                                //                 0: formatString
+                                //             },
+                                //             apool: {
+                                //                 numToAttrib: numToAttrib,
+                                //                 nextNum: Object.keys(numToAttrib).length
+                                //             }
+                                //         }
+                                //     }
+                                // });
                             }
                             
                             // Create the change map entry
@@ -1221,21 +1221,21 @@ export function generateChangeMap(
                                 }];
                                 
                                 // Add easysync subType for the centered equation
-                                equationOps.push({
-                                    p: ['text'],
-                                    subType: {
-                                        t: 'easysync',
-                                        o: {
-                                            zone_changesets: {
-                                                '0': 'Z:1>0*0*1*2=1$'  // Fixed format for centered equations
-                                            },
-                                            apool: {
-                                                numToAttrib: equationNumToAttrib,
-                                                nextNum: 3
-                                            }
-                                        }
-                                    }
-                                });
+                                // equationOps.push({
+                                //     p: ['text'],
+                                //     subType: {
+                                //         t: 'easysync',
+                                //         o: {
+                                //             zone_changesets: {
+                                //                 '0': 'Z:1>0*0*1*2=1$'  // Fixed format for centered equations
+                                //             },
+                                //             apool: {
+                                //                 numToAttrib: equationNumToAttrib,
+                                //                 nextNum: 3
+                                //             }
+                                //         }
+                                //     }
+                                // });
                                 
                                 changeMap[equationId] = {
                                     id: equationId,
@@ -1368,21 +1368,21 @@ export function generateChangeMap(
                                 const formatString = `Z:${textLengthHex}>0=${parsed.equationData.startPos.toString(36)}*0*1*2=${parsed.equationData.length.toString(36)}$`;
                                 
                                 // Add an operation to set the subType for easysync
-                                baseOps.push({
-                                    p: ['text'],
-                                    subType: {
-                                        t: 'easysync',
-                                        o: {
-                                            zone_changesets: {
-                                                0: formatString
-                                            },
-                                            apool: {
-                                                numToAttrib: numToAttrib,
-                                                nextNum: Object.keys(numToAttrib).length
-                                            }
-                                        }
-                                    }
-                                });
+                                // baseOps.push({
+                                //     p: ['text'],
+                                //     subType: {
+                                //         t: 'easysync',
+                                //         o: {
+                                //             zone_changesets: {
+                                //                 0: formatString
+                                //             },
+                                //             apool: {
+                                //                 numToAttrib: numToAttrib,
+                                //                 nextNum: Object.keys(numToAttrib).length
+                                //             }
+                                //         }
+                                //     }
+                                // });
                             }
                             
                             // Create the change map entry
