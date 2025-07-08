@@ -239,7 +239,7 @@ const parseMarkdownFormatting = (text: string, author: string): ParsedText => {
             // Add format attribute if needed
             if (!formatTypeMap[format]) {
                 formatTypeMap[format] = nextNum++;
-                result.formatTypes[formatTypeMap[format].toString()] = [format, ''];
+                result.formatTypes[formatTypeMap[format].toString()] = [format, 'true'];
             }
             segAttrib += `*${formatTypeMap[format]}`;
         }
