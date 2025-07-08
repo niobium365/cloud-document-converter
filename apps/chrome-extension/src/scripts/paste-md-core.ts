@@ -20,23 +20,33 @@ interface TextProcessingResult {
 
 // --- Core Logic ---
 
-function addBlockToChangeMap(blockData: any, changeMap: ChangeMap, parentId: string, addToParentChildren: boolean = true) {
-    const { obj_id, ...data } = blockData;
-    changeMap[obj_id] = {
-        id: obj_id,
+function addBlockToChangeMap(block: any, changeMap: ChangeMap, parentId: string, addToParentChildren: boolean = true) {
+    const blockId = block.obj_id;
+    delete block.obj_id;
+
+    changeMap[blockId] = {
+        id: blockId,
         version: 0,
         payload: {
             ops: [{
                 p: [],
-                action: { oi: data },
+                action: { oi: { ...block, parent_id: parentId } },
             }],
         },
     };
 
     if (addToParentChildren) {
-        changeMap[parentId].payload.ops.push({
+        if (!changeMap[parentId]) {
+            changeMap[parentId] = {
+                id: parentId,
+                version: 1, // This might need to be dynamic
+                payload: { ops: [] },
+            };
+        }
+
+        changeMap[parentId].payload.ops.unshift({
             p: ['children', 0],
-            action: { li: obj_id },
+            action: { li: blockId },
         });
     }
 }
@@ -62,7 +72,7 @@ export function generateChangeMap(
 
   const ast = unified().use(remarkParse).parse(markdown) as Root;
 
-  ast.children.forEach(node => {
+    ast.children.reverse().forEach(node => {
     processNode(node, pageBlockId, changeMap, author);
   });
 
@@ -287,8 +297,6 @@ function processParagraph(blockId: string, parentId: string, node: Paragraph, ch
             if (tempPara) {
                 const content = processPhrasingContent(tempPara.children, author);
                 const textData = createTextBlockData(content, author);
-                textData.text.initialAttributedTexts.cols = {};
-                textData.text.initialAttributedTexts.rows = {};
                 const block = {
                     obj_id: currentBlockId,
                     parent_id: parentId,
