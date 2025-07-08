@@ -702,7 +702,11 @@ export function generateChangeMap(
                                         parent_id: pageBlockId
                                     }
                                 }
-                            }]
+                            },
+                            { p: ['header_row'], action: { oi: true } },
+                            { p: ['header_column'], action: { oi: true } },
+
+                           ]
                         }
                     };
 
