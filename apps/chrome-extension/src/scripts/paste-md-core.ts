@@ -471,12 +471,12 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
         const key = format.includes('-') ? format : `${format}:${value}`;
         if (formatMap[key] === undefined) {
             formatMap[key] = nextNum++;
-            if (format.includes('-')) {
-                const [type, num] = format.split('-');
-                formatTypes[formatMap[key].toString()] = formatTypes[num];
-            } else {
-                formatTypes[formatMap[key].toString()] = [format, value];
-            }
+            // if (format.includes('-')) {
+            //     const [type, num] = format.split('-');
+            //     formatTypes[formatMap[key].toString()] = formatTypes[num];
+            // } else {
+            //     formatTypes[formatMap[key].toString()] = [format, value];
+            // }
         }
         return formatMap[key];
     }
@@ -501,8 +501,10 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
             case 'inlineMath':
                 const equationContent = node.value;
                 const equationFormatNum = getFormatNum('equation', equationContent);
-                //const inlineEquationFormatNum = getFormatNum('inline_equation');
-                segments.push({ text: node.value, formats: [...currentFormats, `equation-${equationFormatNum}`, `objectID-${generateObjectId()}`] });
+                formatTypes[equationFormatNum.toString()] = ['equation', equationContent]
+                const inlineEquationFormatNum = getFormatNum('inline_equation');
+                formatTypes[inlineEquationFormatNum.toString()] = ['objectID', generateObjectId()]
+                segments.push({ text: node.value, formats: [...currentFormats, `equation-${equationFormatNum}`, `inline_equation-${inlineEquationFormatNum}`] });
                  break;
         }
     }
