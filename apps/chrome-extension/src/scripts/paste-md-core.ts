@@ -84,7 +84,7 @@ export function generateChangeMap(
 }
 
 function processNode(node: Content, parentId: string, changeMap: ChangeMap, author: string, listInfo: { type?: 'ordered' | 'bullet', level?: number, seq?: string } = {}, isStandaloneParagraph: boolean = false) {
-  const blockId = generateId();
+  const blockId = (node as any).temp_id || generateId();
 
   switch (node.type) {
     case 'heading':
@@ -162,13 +162,28 @@ function createListItemBlock(blockId: string, parentId: string, node: ListItem, 
     const firstChild = node.children[0];
     if (!firstChild || firstChild.type !== 'paragraph') return;
 
+    const nestedListChildrenIds: string[] = [];
+    const nestedLists = node.children.slice(1);
+    if (nestedLists.length > 0) {
+        nestedLists.forEach(childNode => {
+            if (childNode.type === 'list') {
+                // Process nested list and get the IDs of its items
+                childNode.children.forEach(item => {
+                    const nestedBlockId = generateId();
+                    nestedListChildrenIds.push(nestedBlockId);
+                    processNode({ ...item, temp_id: nestedBlockId }, blockId, changeMap, author, { ...listInfo, level: (listInfo.level || 0) + 1 });
+                });
+            }
+        });
+    }
+
     const content = processPhrasingContent(firstChild.children, author);
     const textData = createTextBlockData(content, author);
 
     const block = {
         obj_id: blockId,
         type: listInfo.type,
-        children: [],
+        children: nestedListChildrenIds,
         comments: [],
         revisions: [],
         author: textData.author,
@@ -179,15 +194,6 @@ function createListItemBlock(blockId: string, parentId: string, node: ListItem, 
         parent_id: parentId,
     };
     addBlockToChangeMap(block, changeMap, parentId);
-
-    const nestedLists = node.children.slice(1);
-    if (nestedLists.length > 0) {
-        nestedLists.forEach(childNode => {
-            if (childNode.type === 'list') {
-                processNode(childNode, blockId, changeMap, author, { ...listInfo, level: (listInfo.level || 0) + 1 });
-            }
-        });
-    }
 }
 
 function createTableBlock(blockId: string, parentId: string, node: Table, changeMap: ChangeMap, author: string) {
@@ -326,17 +332,35 @@ function createEquationBlock(blockId: string, parentId: string, node: Content, c
 }
 
 function processParagraph(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: string, isStandalone: boolean) {
-    const newChildren: PhrasingContent[] = [];
-    node.children.forEach(child => {
-        if (child.type === 'inlineCode') {
-            const value = (child.children[0] as Text).value;
-            newChildren.push({ type: 'inlineEquation', value } as any);
-        } else {
-            newChildren.push(child);
-        }
-    });
+    const inlineMathIndex = node.children.findIndex(child => child.type === 'inlineMath');
 
-    const content = processPhrasingContent(newChildren, author);
+    if (inlineMathIndex > -1) {
+        const beforeChildren = node.children.slice(0, inlineMathIndex);
+        const mathNode = node.children[inlineMathIndex];
+        const afterChildren = node.children.slice(inlineMathIndex + 1);
+
+        if (beforeChildren.length > 0 && beforeChildren.some(c => 'value' in c && c.value.trim())) {
+            const beforeBlockId = generateId();
+            const beforeNode: Paragraph = { type: 'paragraph', children: beforeChildren };
+            createSimpleParagraphBlock(beforeBlockId, parentId, beforeNode, changeMap, author, isStandalone);
+        }
+
+        const equationBlockId = generateId();
+        const blockMathNode: Content = { type: 'math', value: (mathNode as any).value };
+        createEquationBlock(equationBlockId, parentId, blockMathNode, changeMap, author);
+
+        if (afterChildren.length > 0 && afterChildren.some(c => 'value' in c && c.value.trim())) {
+            const afterBlockId = generateId();
+            const afterNode: Paragraph = { type: 'paragraph', children: afterChildren };
+            createSimpleParagraphBlock(afterBlockId, parentId, afterNode, changeMap, author, isStandalone);
+        }
+    } else {
+        createSimpleParagraphBlock(blockId, parentId, node, changeMap, author, isStandalone);
+    }
+}
+
+function createSimpleParagraphBlock(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: string, isStandalone: boolean) {
+    const content = processPhrasingContent(node.children, author);
     const textData = createTextBlockData(content, author);
 
     if (isStandalone) {
