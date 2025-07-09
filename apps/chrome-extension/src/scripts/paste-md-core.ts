@@ -276,9 +276,10 @@ function createTableBlock(node: Table, parentId: string, author: string, changeM
 }
 
 function createCodeBlock(blockId: string, parentId: string, node: Code, changeMap: ChangeMap, author: string) {
+  const lines = node.value.split('\n').length - 1;
   const textContent = {
     text: node.value,
-    attribs: `*0+${node.value.length}`,
+    attribs: lines>0?`*0|${lines.toString(36)}+${node.value.length.toString(36)}`:`*0+${node.value.length.toString(36)}`,
     formatTypes: { '0': ['author', author] },
   };
 
