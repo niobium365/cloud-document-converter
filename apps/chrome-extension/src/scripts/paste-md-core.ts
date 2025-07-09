@@ -209,13 +209,26 @@ function createTableBlock(blockId: string, parentId: string, node: Table, change
           cell_ids.push(cellId);
           const cellNode = node.children[i]?.children[j];
           if (cellNode) {
+              const textBlockId = generateId();
               const content = processPhrasingContent(cellNode.children, author);
               const textData = createTextBlockData(content, author);
+              const textBlock = {
+                  obj_id: textBlockId,
+                  parent_id: cellId,
+                  type: 'text',
+                  ...textData,
+              };
+              addBlockToChangeMap(textBlock, changeMap, cellId, false);
+
               const cellBlock = {
                   obj_id: cellId,
                   parent_id: blockId,
                   type: 'table_cell',
-                  ...textData,
+                  children: [],
+                  comments: [],
+                  revisions: [],
+                  author: author,                  
+                  children: [textBlockId],
               };
               addBlockToChangeMap(cellBlock, changeMap, parentId, false);
           }
