@@ -504,7 +504,7 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
                 node.children.forEach(child => processMdastNode(child, [...currentFormats, 'strikethrough']));
                 break;
             case 'inlineCode':
-                segments.push({ text: node.value, formats: [...currentFormats, 'code'] });
+                segments.push({ text: node.value, formats: [...currentFormats, 'inlineCode'] });
                 break;
             case 'inlineMath':
                 const equationContent = node.value;
