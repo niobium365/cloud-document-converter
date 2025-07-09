@@ -136,8 +136,9 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
 function createTextBlockData(content: TextProcessingResult, author: string) {
     return {
         author: author,
-        cols: 0,
-        rows: 0,
+        children: [],
+        comments: [],
+        revisions: [],
         text: {
             initialAttributedTexts: {
                 text: { '0': content.text },
@@ -227,6 +228,7 @@ function createTableBlock(node: Table, parentId: string, author: string, changeM
                 const textBlock = {
                     obj_id: textBlockId,
                     parent_id: cellId,
+                    align: 'left',
                     type: 'text',
                     ...textData,
                 };
