@@ -118,6 +118,9 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
     case 'blockquote':
       createBlockquote(blockId, parentId, node, changeMap, author);
       break;
+    case 'math':
+      createEquationBlock(blockId, parentId, node, changeMap, author);
+      break;
   }
 }
 
@@ -290,6 +293,36 @@ function createBlockquote(blockId: string, parentId: string, node: Blockquote, c
         children: childrenIds,
     };
     addBlockToChangeMap(quoteContainer, changeMap, parentId);
+}
+
+function createEquationBlock(blockId: string, parentId: string, node: Content, changeMap: ChangeMap, author: string) {
+    const equationContent = (node as any).value;
+    const block = {
+        obj_id: blockId,
+        parent_id: parentId,
+        type: 'text',
+        children: [],
+        comments: [],
+        revisions: [],
+        author,
+        text: {
+            initialAttributedTexts: {
+                text: { '0': ' ' },
+                attribs: { '0': `*0*1*2+1` },
+            },
+            apool: {
+                numToAttrib: {
+                    '0': ['author', author],
+                    '1': ['equation', equationContent],
+                    '2': ['objectID', generateObjectId()],
+                },
+                nextNum: 3,
+            },
+        },
+        folded: false,
+        align: 'center',
+    };
+    addBlockToChangeMap(block, changeMap, parentId);
 }
 
 function processParagraph(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: string, isStandalone: boolean) {
