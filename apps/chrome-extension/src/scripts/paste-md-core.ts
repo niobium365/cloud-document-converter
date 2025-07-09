@@ -117,8 +117,8 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
       createDividerBlock(blockId, parentId, changeMap);
       break;
     case 'blockquote':
-      createBlockquote(blockId, parentId, node, changeMap, author);
-      break;
+        createQuoteContainerBlock(blockId, parentId, node, changeMap, author, sourceText);
+        break;
     case 'math':
       createEquationBlock(blockId, parentId, node, changeMap, author);
       break;
@@ -285,7 +285,7 @@ function createMermaidBlock(blockId: string, parentId: string, node: Code, chang
     addBlockToChangeMap(mermaidBlock, changeMap, parentId);
 }
 
-function createBlockquote(blockId: string, parentId: string, node: Blockquote, changeMap: ChangeMap, author: string) {
+function createQuoteContainerBlock(blockId: string, parentId: string, node: Blockquote, changeMap: ChangeMap, author: string, sourceText: string) {
     const childrenIds = [];
     node.children.forEach(child => {
         const childBlockId = generateId();
