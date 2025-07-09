@@ -97,7 +97,11 @@ function generateUuid(): string {
 /**
  * Write change map output to file or stdout with proper structure
  */
-function writeOutput(changeMap: Record<string, any>, pageBlockId: string, outputPath?: string): void {
+function writeOutput(changeMap: Record<string, any>, pageBlockId: string, outputPath?: string, inputPath?: string): void {
+  if (!outputPath && inputPath) {
+    outputPath = inputPath + '.output.json'
+  }
+  // if outputPath is empty, let outputPath = inputPath+".output.json"
   // Create the proper structure matching test_req.json exactly
   const outputData = {
     "member_id": "48829052993958",
@@ -145,7 +149,7 @@ async function main() {
     )
     
     // Write the output
-    writeOutput(changeMap, argv.pageBlockId, argv.output)
+    writeOutput(changeMap, argv.pageBlockId, argv.output, argv.input)
   } catch (error) {
     console.error(`Error: ${error.message}`)
     process.exit(1)

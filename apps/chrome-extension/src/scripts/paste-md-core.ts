@@ -1,5 +1,7 @@
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import type { Root, Content, Paragraph, Heading, List, ListItem, Table, Code, ThematicBreak, Blockquote, PhrasingContent } from 'mdast';
 
 // --- Helper Functions ---
@@ -70,7 +72,8 @@ export function generateChangeMap(
     return changeMap;
   }
 
-  const ast = unified().use(remarkParse).parse(markdown) as Root;
+  const processor = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
+  const ast = processor.parse(markdown) as Root;
 
   const isSimpleParagraphs = ast.children.every(n => n.type === 'paragraph');
   ast.children.forEach(node => {
@@ -178,7 +181,7 @@ function createListItemBlock(blockId: string, parentId: string, node: ListItem, 
     if (nestedLists.length > 0) {
         nestedLists.forEach(childNode => {
             if (childNode.type === 'list') {
-                processNode(childNode, parentId, changeMap, author, { ...listInfo, level: (listInfo.level || 0) + 1 });
+                processNode(childNode, blockId, changeMap, author, { ...listInfo, level: (listInfo.level || 0) + 1 });
             }
         });
     }
