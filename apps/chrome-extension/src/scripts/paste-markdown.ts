@@ -244,11 +244,19 @@ const insertParagraph = async (
               console.log(`Using insertion position ${insertPosition} from direct child block ${directChildId}`);
           }
       }      
-      // Generate change map for the new markdown content, passing the insertPosition
-      const contentChangeMap = generateChangeMap(pageBlockId, text, author, insertPosition);
+      // Generate change map for the new markdown content
+      const contentChangeMap = generateChangeMap(pageBlockId, text, author);
       
       if(Object.keys(contentChangeMap).length === 0)
         return false;
+
+      if (contentChangeMap[pageBlockId] && contentChangeMap[pageBlockId].payload && contentChangeMap[pageBlockId].payload.ops) {
+        contentChangeMap[pageBlockId].payload.ops.forEach((op: any) => {
+          if (op.action && op.action.li && op.p && op.p[0] === 'children') {
+            op.p[1] = insertPosition;
+          }
+        });
+      }
       
       // Create the final change map that includes deletion of existing blocks
       const changeMap = { ...contentChangeMap };
