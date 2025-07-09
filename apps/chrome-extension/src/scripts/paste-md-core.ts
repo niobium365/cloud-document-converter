@@ -489,6 +489,11 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
             case 'text':
                 segments.push({ text: node.value, formats: currentFormats });
                 break;
+            case 'html':
+                if (node.value.toLowerCase().includes('<br')) {
+                    segments.push({ text: '\n', formats: currentFormats });
+                }
+                break;
             case 'strong':
                 node.children.forEach(child => processMdastNode(child, [...currentFormats, 'bold']));
                 break;
