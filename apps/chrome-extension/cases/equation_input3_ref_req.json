@@ -1,0 +1,198 @@
+{
+    "member_id": "62677449354298",
+    "uuid": "b6a7fdc7-a9d0-4738-92d5-0b5113f085c0",
+    "page_id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd",
+    "change_map": {
+        "GU8Ad2RYIo8yMzxKxcOcGy0mnvd": {
+            "id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd",
+            "version": 85,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "Rf35dq26QobuQOxeOVccRAqCnxd"
+                        }
+                    },
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "Bp73dU6VeosN0DxFtatcu28Enje"
+                        }
+                    }
+                ]
+            }
+        },
+        "Bp73dU6VeosN0DxFtatcu28Enje": {
+            "id": "Bp73dU6VeosN0DxFtatcu28Enje",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "abc def ghi"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+3*0*1*2+1*0+3*0*3*4+1*0+3"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ],
+                                            "1": [
+                                                "equation",
+                                                "y=f(x)\n"
+                                            ],
+                                            "2": [
+                                                "objectID",
+                                                "L7HiDPeD"
+                                            ],
+                                            "3": [
+                                                "equation",
+                                                "z=g(x, y)\n"
+                                            ],
+                                            "4": [
+                                                "objectID",
+                                                "UHkXu8vM"
+                                            ]
+                                        },
+                                        "nextNum": 5,
+                                        "attribToNum": {
+                                            "author,6955273262934802433": 0,
+                                            "equation,y=f(x)\n": 1,
+                                            "equation,z=g(x, y)\n": 3,
+                                            "objectID,L7HiDPeD": 2,
+                                            "objectID,UHkXu8vM": 4
+                                        }
+                                    },
+                                    "initialAttributedText": {
+                                        "attribs": "*0+3*0*1*2+1*0+3*0*3*4+1*0+3",
+                                        "text": "abc def ghi"
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd"
+                            }
+                        }
+                    },
+                    {
+                        "p": [
+                            "text"
+                        ],
+                        "subType": {
+                            "t": "easysync",
+                            "o": {
+                                "zone_changesets": {
+                                    "0": "Z:b>0=3*0*3*4=1=3*0*1*2=1$"
+                                },
+                                "apool": {
+                                    "numToAttrib": {
+                                        "0": [
+                                            "author",
+                                            "6955273262934802433"
+                                        ],
+                                        "1": [
+                                            "equation",
+                                            "z=g(x, y)\n"
+                                        ],
+                                        "2": [
+                                            "objectID",
+                                            "KVqrN17O"
+                                        ],
+                                        "3": [
+                                            "equation",
+                                            "y=f(x)\n"
+                                        ],
+                                        "4": [
+                                            "objectID",
+                                            "6LtiMYj8"
+                                        ]
+                                    },
+                                    "nextNum": 5,
+                                    "attribToNum": {
+                                        "author,6955273262934802433": 0,
+                                        "equation,z=g(x, y)\n": 1,
+                                        "objectID,KVqrN17O": 2,
+                                        "equation,y=f(x)\n": 3,
+                                        "objectID,6LtiMYj8": 4
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "Rf35dq26QobuQOxeOVccRAqCnxd": {
+            "id": "Rf35dq26QobuQOxeOVccRAqCnxd",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "Normal paragraph"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+g"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1,
+                                        "attribToNum": {
+                                            "author,6955273262934802433": 0
+                                        }
+                                    },
+                                    "initialAttributedText": {
+                                        "attribs": "*0+g",
+                                        "text": "Normal paragraph"
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}
