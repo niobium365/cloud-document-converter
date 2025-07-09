@@ -460,13 +460,10 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
                 segments.push({ text: node.value, formats: [...currentFormats, 'code'] });
                 break;
             case 'inlineMath':
-                 const equationContent = node.value;
-                 const objectId = generateObjectId();
-                 const equationNum = nextNum++;
-                 const objectIdNum = nextNum++;
-                 formatTypes[equationNum.toString()] = ['equation', equationContent];
-                 formatTypes[objectIdNum.toString()] = ['objectID', objectId];
-                 segments.push({ text: node.value, formats: [...currentFormats, `equation-${equationNum}`, `objectID-${objectIdNum}`] });
+                const equationContent = node.value;
+                const equationFormatNum = getFormatNum('equation', equationContent);
+                const inlineEquationFormatNum = getFormatNum('inline_equation');
+                segments.push({ text: node.value, formats: [...currentFormats, `equation-${equationFormatNum}`, `inline_equation-${inlineEquationFormatNum}`] });
                  break;
         }
     }
@@ -501,7 +498,13 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
     };
 
     attribs = mergedSegments.map(seg => {
-        const formatStr = seg.formats.map(f => `*${getFormatNum(f)}`).join('');
+        const formatStr = seg.formats.map(f => {
+            if (f.includes('-')) {
+                const [_type, num] = f.split('-');
+                return `*${num}`;
+            }
+            return `*${getFormatNum(f)}`;
+        }).join('');
         const text = seg.text;
         
         const lastNewlineIndex = text.lastIndexOf('\n');
