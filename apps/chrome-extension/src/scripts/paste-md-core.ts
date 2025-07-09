@@ -102,7 +102,7 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
       });
       break;
     case 'listItem':
-      createListItemBlock(blockId, parentId, node, changeMap, author, listInfo);
+      createListItemBlock(blockId, parentId, node, changeMap, author, sourceText, listInfo);
       break;
     case 'table':
       createTableBlock(blockId, parentId, node, changeMap, author);
@@ -160,7 +160,7 @@ function createHeadingBlock(blockId: string, parentId: string, node: Heading, ch
   addBlockToChangeMap(block, changeMap, parentId);
 }
 
-function createListItemBlock(blockId: string, parentId: string, node: ListItem, changeMap: ChangeMap, author: string, listInfo: any) {
+function createListItemBlock(blockId: string, parentId: string, node: ListItem, changeMap: ChangeMap, author: string, sourceText: string, listInfo: any) {
     const firstChild = node.children[0];
     if (!firstChild || firstChild.type !== 'paragraph') return;
 
@@ -462,8 +462,8 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
             case 'inlineMath':
                 const equationContent = node.value;
                 const equationFormatNum = getFormatNum('equation', equationContent);
-                const inlineEquationFormatNum = getFormatNum('inline_equation');
-                segments.push({ text: node.value, formats: [...currentFormats, `equation-${equationFormatNum}`, `inline_equation-${inlineEquationFormatNum}`] });
+                //const inlineEquationFormatNum = getFormatNum('inline_equation');
+                segments.push({ text: node.value, formats: [...currentFormats, `equation-${equationFormatNum}`, `objectID-${generateObjectId()}`] });
                  break;
         }
     }
