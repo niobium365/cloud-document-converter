@@ -353,7 +353,7 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
             if (node.type === 'text') {
                 text += node.value;
                 attribs += `*${activeFormats.join('*')}+${node.value.length.toString(36)}`;
-            } else if ((node.type as any) === 'inlineEquation') {
+            } else if (node.type === 'inlineMath') {
                 const equationContent = (node as any).value;
                 const equationNum = addFormat('equation', equationContent);
                 const objectIdNum = addFormat('objectID', generateObjectId());
