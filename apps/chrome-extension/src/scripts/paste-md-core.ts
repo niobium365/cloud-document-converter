@@ -358,7 +358,7 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
                 text += equationContent;
                 attribs += `*${equationFormats.join('*')}+${equationContent.length.toString(36)}`;
             } else if (['strong', 'emphasis', 'delete'].includes(node.type)) {
-                const formatMap = { strong: 'b', emphasis: 'i', delete: 's' };
+                const formatMap = { strong: 'bold', emphasis: 'italic', delete: 'strikethrough' };
                 const formatNum = addFormat(formatMap[node.type], 'true');
                 traverse(node.children, [...activeFormats, formatNum].sort((a, b) => a - b));
             }
