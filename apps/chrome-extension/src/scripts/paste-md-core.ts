@@ -350,42 +350,71 @@ function createMermaidBlock(blockId: string, parentId: string, node: Code, chang
 }
 
 function createQuoteContainerBlock(blockId: string, parentId: string, node: Blockquote, changeMap: ChangeMap, author: string, sourceText: string) {
-    const childrenIds = [];
+    const firstChild = node.children[0];
+    let isCallout = false;
+    if (firstChild && firstChild.type === 'paragraph') {
+        const textContent = mdastToString(firstChild);
+        if (textContent.startsWith('^^^')) {
+            isCallout = true;
+        }
+    }
 
-    node.children.forEach(childNode => {
-        if (childNode.type === 'paragraph') {
+    if (isCallout) {
+        const calloutBlock = {
+            obj_id: blockId,
+            parent_id: parentId,
+            type: 'callout',
+            children: [],
+            author: author,
+            comments: [],
+            revisions: [],
+            emoji_id: 'eggplant',
+            emoji_value: '1f3d5-fe0f',
+            background_color: 'rgb(255, 245, 235)',
+            border_color: 'rgb(254, 212, 164)',
+            text_color: '',
+            align: 'left',
+        };
+
+        const childrenIds = [];
+        node.children.forEach((childNode, index) => {
             const childBlockId = generateId();
             childrenIds.push(childBlockId);
-            
-            const content = processPhrasingContent(childNode.children, author);
-            const textData = createTextBlockData(content, author);
-            
-            const textBlock = {
-                obj_id: childBlockId,
-                parent_id: blockId,
-                type: 'text',
-                children: [],
-                comments: [],
-                revisions: [],
-                folded: false,
-                author: author,
-                text: textData.text,
-            };
-            
-            addBlockToChangeMap(textBlock, changeMap, blockId, false);
-        } else {
-            // In a real-world scenario, you might want to handle other block types within a quote.
-            console.warn(`Unsupported node type inside blockquote: ${childNode.type}`);
-        }
-    });
-    
-    const quoteContainer = {
-        obj_id: blockId,
-        parent_id: parentId,
-        type: 'quote_container',
-        children: childrenIds,
-    };
-    addBlockToChangeMap(quoteContainer, changeMap, parentId);
+
+            if (index === 0) {
+                const modifiedChild = JSON.parse(JSON.stringify(childNode));
+                if (modifiedChild.children[0]?.type === 'text') {
+                    modifiedChild.children[0].value = modifiedChild.children[0].value.substring(3);
+                }
+                processNode(modifiedChild, blockId, changeMap, author, sourceText, {});
+            } else {
+                processNode(childNode, blockId, changeMap, author, sourceText, {});
+            }
+        });
+
+        calloutBlock.children = childrenIds;
+        addBlockToChangeMap(calloutBlock, changeMap, parentId, true);
+    } else {
+        const quoteContainer = {
+            obj_id: blockId,
+            parent_id: parentId,
+            type: 'quote_container',
+            children: [],
+            author: author,
+            comments: [],
+            revisions: [],
+        };
+
+        const childrenIds = [];
+        node.children.forEach(childNode => {
+            const childBlockId = generateId();
+            childrenIds.push(childBlockId);
+            processNode(childNode, blockId, changeMap, author, sourceText, {});
+        });
+
+        quoteContainer.children = childrenIds;
+        addBlockToChangeMap(quoteContainer, changeMap, parentId, true);
+    }
 }
 
 function createEquationBlock(blockId: string, parentId: string, node: Content, changeMap: ChangeMap, author: string) {
