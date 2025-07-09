@@ -269,7 +269,10 @@ function createTableBlock(node: Table, parentId: string, author: string, changeM
             )
         ) as any,
     };
+    const tblId = tableBlock.obj_id;
     addBlockToChangeMap(tableBlock, changeMap, parentId, true);
+    changeMap[tblId].payload.ops.push({ p: ['header_row'], action: { oi: true } });
+    changeMap[tblId].payload.ops.push({ p: ['header_column'], action: { oi: true } });
 }
 
 function createCodeBlock(blockId: string, parentId: string, node: Code, changeMap: ChangeMap, author: string) {
