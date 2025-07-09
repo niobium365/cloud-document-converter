@@ -387,8 +387,10 @@ function createQuoteContainerBlock(blockId: string, parentId: string, node: Bloc
                 if (modifiedChild.children[0]?.type === 'text') {
                     modifiedChild.children[0].value = modifiedChild.children[0].value.substring(3);
                 }
+                modifiedChild.temp_id = childBlockId;
                 processNode(modifiedChild, blockId, changeMap, author, sourceText, {});
             } else {
+                childNode.temp_id = childBlockId;
                 processNode(childNode, blockId, changeMap, author, sourceText, {});
             }
         });
@@ -396,26 +398,43 @@ function createQuoteContainerBlock(blockId: string, parentId: string, node: Bloc
         calloutBlock.children = childrenIds;
         addBlockToChangeMap(calloutBlock, changeMap, parentId, true);
     } else {
-        const quoteContainer = {
-            obj_id: blockId,
-            parent_id: parentId,
-            type: 'quote_container',
-            children: [],
-            author: author,
-            comments: [],
-            revisions: [],
-        };
+    const childrenIds = [];
 
-        const childrenIds = [];
-        node.children.forEach(childNode => {
+    node.children.forEach(childNode => {
+        if (childNode.type === 'paragraph') {
             const childBlockId = generateId();
             childrenIds.push(childBlockId);
-            processNode(childNode, blockId, changeMap, author, sourceText, {});
-        });
-
-        quoteContainer.children = childrenIds;
-        addBlockToChangeMap(quoteContainer, changeMap, parentId, true);
-    }
+            
+            const content = processPhrasingContent(childNode.children, author);
+            const textData = createTextBlockData(content, author);
+            
+            const textBlock = {
+                obj_id: childBlockId,
+                parent_id: blockId,
+                type: 'text',
+                children: [],
+                comments: [],
+                revisions: [],
+                folded: false,
+                author: author,
+                text: textData.text,
+            };
+            
+            addBlockToChangeMap(textBlock, changeMap, blockId, false);
+        } else {
+            // In a real-world scenario, you might want to handle other block types within a quote.
+            console.warn(`Unsupported node type inside blockquote: ${childNode.type}`);
+        }
+    });
+    
+    const quoteContainer = {
+        obj_id: blockId,
+        parent_id: parentId,
+        type: 'quote_container',
+        children: childrenIds,
+    };
+    addBlockToChangeMap(quoteContainer, changeMap, parentId);
+}
 }
 
 function createEquationBlock(blockId: string, parentId: string, node: Content, changeMap: ChangeMap, author: string) {
