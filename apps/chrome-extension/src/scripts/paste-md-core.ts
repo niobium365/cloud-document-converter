@@ -2,6 +2,7 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
+import { toString as mdastToString } from 'mdast-util-to-string';
 import type { Root, Content, Paragraph, Heading, List, ListItem, Table, Code, ThematicBreak, Blockquote, PhrasingContent } from 'mdast';
 
 // --- Helper Functions ---
@@ -287,16 +288,38 @@ function createMermaidBlock(blockId: string, parentId: string, node: Code, chang
 
 function createQuoteContainerBlock(blockId: string, parentId: string, node: Blockquote, changeMap: ChangeMap, author: string, sourceText: string) {
     const childrenIds = [];
-    node.children.forEach(child => {
-        const childBlockId = generateId();
-        childrenIds.push(childBlockId);
-        processNode({ ...child, temp_id: childBlockId }, blockId, changeMap, author, sourceText);
-    });
 
+    node.children.forEach(childNode => {
+        if (childNode.type === 'paragraph') {
+            const childBlockId = generateId();
+            childrenIds.push(childBlockId);
+            
+            const content = processPhrasingContent(childNode.children, author);
+            const textData = createTextBlockData(content, author);
+            
+            const textBlock = {
+                obj_id: childBlockId,
+                parent_id: blockId,
+                type: 'text',
+                children: [],
+                comments: [],
+                revisions: [],
+                folded: false,
+                author: author,
+                text: textData.text,
+            };
+            
+            addBlockToChangeMap(textBlock, changeMap, blockId, false);
+        } else {
+            // In a real-world scenario, you might want to handle other block types within a quote.
+            console.warn(`Unsupported node type inside blockquote: ${childNode.type}`);
+        }
+    });
+    
     const quoteContainer = {
         obj_id: blockId,
         parent_id: parentId,
-        type: 'quote',
+        type: 'quote_container',
         children: childrenIds,
     };
     addBlockToChangeMap(quoteContainer, changeMap, parentId);
@@ -304,63 +327,65 @@ function createQuoteContainerBlock(blockId: string, parentId: string, node: Bloc
 
 function createEquationBlock(blockId: string, parentId: string, node: Content, changeMap: ChangeMap, author: string) {
     const equationContent = (node as any).value;
-    const block = {
+    const objectId = generateObjectId();
+
+    const equationBlock = {
         obj_id: blockId,
         parent_id: parentId,
-        type: 'text',
-        children: [],
-        comments: [],
-        revisions: [],
-        author,
-        text: {
+        type: 'equation',
+        author: author,
+        align: 'center',
+        equation: {
             initialAttributedTexts: {
-                text: { '0': ' ' },
-                attribs: { '0': `*0*1*2+1` },
+                text: {
+                    '0': ' '
+                },
+                attribs: {
+                    '0': '*0*1*2+1'
+                }
             },
             apool: {
                 numToAttrib: {
                     '0': ['author', author],
                     '1': ['equation', equationContent],
-                    '2': ['objectID', generateObjectId()],
+                    '2': ['objectID', objectId]
                 },
-                nextNum: 3,
-            },
-        },
-        folded: false,
-        align: 'center',
+                nextNum: 3
+            }
+        }
     };
-    addBlockToChangeMap(block, changeMap, parentId);
+
+    addBlockToChangeMap(equationBlock, changeMap, parentId);
 }
 
 function processParagraph(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: string, sourceText: string, isStandalone: boolean) {
-    const inlineMathIndex = node.children.findIndex(child => {
-        if (child.type === 'inlineMath' && child.position) {
-            const rawText = sourceText.substring(child.position.start.offset, child.position.end.offset);
-            return rawText.startsWith('$$');
-        }
-        return false;
-    });
+    const inlineMathIndex = node.children.findIndex(child => 
+        child.type === 'inlineMath' && 
+        child.position && 
+        sourceText.substring(child.position.start.offset, child.position.end.offset).startsWith('$$')
+    );
 
-    if (inlineMathIndex > -1) {
+    if (inlineMathIndex !== -1) {
         const beforeChildren = node.children.slice(0, inlineMathIndex);
-        const mathNode = node.children[inlineMathIndex];
+        const mathNode = node.children[inlineMathIndex] as any;
         const afterChildren = node.children.slice(inlineMathIndex + 1);
 
-        if (beforeChildren.length > 0 && beforeChildren.some(c => 'value' in c && c.value.trim())) {
+        if (beforeChildren.length > 0 && mdastToString({type: 'paragraph', children: beforeChildren}).trim()) {
             const beforeBlockId = generateId();
             const beforeNode: Paragraph = { type: 'paragraph', children: beforeChildren };
-            createSimpleParagraphBlock(beforeBlockId, parentId, beforeNode, changeMap, author, isStandalone);
+            createSimpleParagraphBlock(beforeBlockId, parentId, beforeNode, changeMap, author, false);
         }
 
         const equationBlockId = generateId();
-        const blockMathNode: Content = { type: 'math', value: (mathNode as any).value };
-        createEquationBlock(equationBlockId, parentId, blockMathNode, changeMap, author);
+        const equationNode: Content = { type: 'math', value: mathNode.value };
+        createEquationBlock(equationBlockId, parentId, equationNode, changeMap, author);
 
-        if (afterChildren.length > 0 && afterChildren.some(c => 'value' in c && c.value.trim())) {
+        if (afterChildren.length > 0 && mdastToString({type: 'paragraph', children: afterChildren}).trim()) {
             const afterBlockId = generateId();
             const afterNode: Paragraph = { type: 'paragraph', children: afterChildren };
-            createSimpleParagraphBlock(afterBlockId, parentId, afterNode, changeMap, author, isStandalone);
+            createSimpleParagraphBlock(afterBlockId, parentId, afterNode, changeMap, author, false);
         }
+
     } else {
         createSimpleParagraphBlock(blockId, parentId, node, changeMap, author, isStandalone);
     }
@@ -395,43 +420,118 @@ function createSimpleParagraphBlock(blockId: string, parentId: string, node: Par
 }
 
 function processPhrasingContent(nodes: PhrasingContent[], author: string): TextProcessingResult {
-    let text = '';
-    let attribs = '';
     const formatTypes: Record<string, [string, string]> = { '0': ['author', author] };
     let nextNum = 1;
-    const formatTypeMap: Record<string, number> = {};
+    const formatMap: Record<string, number> = {};
 
-    function addFormat(type: string, value: string): number {
-        const key = `${type},${value}`;
-        if (formatTypeMap[key] !== undefined) {
-            return formatTypeMap[key];
-        }
-        const num = nextNum++;
-        formatTypes[num.toString()] = [type, value];
-        formatTypeMap[key] = num;
-        return num;
+    interface Segment {
+        text: string;
+        formats: string[];
     }
 
-    function traverse(subNodes: PhrasingContent[], activeFormats: number[]) {
-        subNodes.forEach(node => {
-            if (node.type === 'text') {
-                text += node.value;
-                attribs += `*${activeFormats.join('*')}+${node.value.length.toString(36)}`;
-            } else if (node.type === 'inlineMath') {
-                const equationContent = (node as any).value;
-                const equationAttribNum = addFormat('equation', equationContent);
-                const objectIDAttribNum = addFormat('objectID', generateObjectId());
-                const equationFormats = [...activeFormats, equationAttribNum, objectIDAttribNum].sort((a, b) => a - b);
-                text += equationContent;
-                attribs += `*${equationFormats.join('*')}+${equationContent.length.toString(36)}`;
-            } else if (['strong', 'emphasis', 'delete'].includes(node.type)) {
-                const formatMap = { strong: 'bold', emphasis: 'italic', delete: 'strikethrough' };
-                const formatNum = addFormat(formatMap[node.type], 'true');
-                traverse(node.children, [...activeFormats, formatNum].sort((a, b) => a - b));
+    const segments: Segment[] = [];
+
+    function getFormatNum(format: string, value: string = 'true'): number {
+        const key = format.includes('-') ? format : `${format}:${value}`;
+        if (formatMap[key] === undefined) {
+            formatMap[key] = nextNum++;
+            if (format.includes('-')) {
+                const [type, num] = format.split('-');
+                formatTypes[formatMap[key].toString()] = formatTypes[num];
+            } else {
+                formatTypes[formatMap[key].toString()] = [format, value];
             }
-        });
+        }
+        return formatMap[key];
     }
 
-    traverse(nodes, [0]);
-    return { text, attribs, formatTypes };
+    function processMdastNode(node: PhrasingContent, currentFormats: string[]) {
+        switch (node.type) {
+            case 'text':
+                segments.push({ text: node.value, formats: currentFormats });
+                break;
+            case 'strong':
+                node.children.forEach(child => processMdastNode(child, [...currentFormats, 'bold']));
+                break;
+            case 'emphasis':
+                node.children.forEach(child => processMdastNode(child, [...currentFormats, 'italic']));
+                break;
+            case 'delete':
+                node.children.forEach(child => processMdastNode(child, [...currentFormats, 'strikethrough']));
+                break;
+            case 'inlineCode':
+                segments.push({ text: node.value, formats: [...currentFormats, 'code'] });
+                break;
+            case 'inlineMath':
+                 const equationContent = node.value;
+                 const objectId = generateObjectId();
+                 const equationNum = nextNum++;
+                 const objectIdNum = nextNum++;
+                 formatTypes[equationNum.toString()] = ['equation', equationContent];
+                 formatTypes[objectIdNum.toString()] = ['objectID', objectId];
+                 segments.push({ text: node.value, formats: [...currentFormats, `equation-${equationNum}`, `objectID-${objectIdNum}`] });
+                 break;
+        }
+    }
+
+    nodes.forEach(node => processMdastNode(node, []));
+
+    // Merge segments with same formats
+    const mergedSegments: Segment[] = [];
+    if (segments.length > 0) {
+        mergedSegments.push({ ...segments[0] });
+        for (let i = 1; i < segments.length; i++) {
+            const lastSegment = mergedSegments[mergedSegments.length - 1];
+            const currentSegment = segments[i];
+            if (JSON.stringify(lastSegment.formats.sort()) === JSON.stringify(currentSegment.formats.sort())) {
+                lastSegment.text += currentSegment.text;
+            } else {
+                mergedSegments.push({ ...currentSegment });
+            }
+        }
+    }
+
+    const fullText = mergedSegments.map(s => s.text).join('');
+    let attribs = '';
+
+    const buildAttribsString = (segs: Segment[]) => {
+        let a = '';
+        segs.forEach(seg => {
+            const formatStr = seg.formats.map(f => `*${getFormatNum(f)}`).join('');
+            a += `*0${formatStr}+${seg.text.length.toString(36)}`;
+        });
+        return a;
+    };
+
+    attribs = mergedSegments.map(seg => {
+        const formatStr = seg.formats.map(f => `*${getFormatNum(f)}`).join('');
+        const text = seg.text;
+        
+        const lastNewlineIndex = text.lastIndexOf('\n');
+
+        if (lastNewlineIndex !== -1) {
+            const part1 = text.substring(0, lastNewlineIndex + 1);
+            const part2 = text.substring(lastNewlineIndex + 1);
+
+            const newlineCount = (part1.match(/\n/g) || []).length;
+            
+            let result = '';
+            if (part1.length > 0) {
+                result += `*0${formatStr}|${newlineCount}+${part1.length.toString(36)}`;
+            }
+            if (part2.length > 0) {
+                result += `*0${formatStr}+${part2.length.toString(36)}`;
+            }
+            return result;
+
+        } else {
+            return `*0${formatStr}+${text.length.toString(36)}`;
+        }
+    }).join('');
+
+    return {
+        text: fullText,
+        attribs: attribs,
+        formatTypes: formatTypes,
+    };
 }
