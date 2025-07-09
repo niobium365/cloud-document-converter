@@ -58,6 +58,7 @@ export function generateChangeMap(
   markdown: string,
   author: string,
 ): ChangeMap {
+  const sourceText = markdown;
   const changeMap: ChangeMap = {
     [pageBlockId]: {
         id: pageBlockId,
@@ -73,17 +74,17 @@ export function generateChangeMap(
   }
 
   const processor = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
-  const ast = processor.parse(markdown) as Root;
+  const tree = processor.parse(sourceText) as Root;
 
-  const isSimpleParagraphs = ast.children.every(n => n.type === 'paragraph');
-  ast.children.forEach(node => {
-    processNode(node, pageBlockId, changeMap, author, {}, isSimpleParagraphs);
+  const isSimpleParagraphs = tree.children.every(n => n.type === 'paragraph');
+  tree.children.forEach(node => {
+    processNode(node, pageBlockId, changeMap, author, sourceText, {}, isSimpleParagraphs);
   });
 
   return changeMap;
 }
 
-function processNode(node: Content, parentId: string, changeMap: ChangeMap, author: string, listInfo: { type?: 'ordered' | 'bullet', level?: number, seq?: string } = {}, isStandaloneParagraph: boolean = false) {
+function processNode(node: Content, parentId: string, changeMap: ChangeMap, author: string, sourceText: string, listInfo: { type?: 'ordered' | 'bullet', level?: number, seq?: string } = {}, isStandaloneParagraph: boolean = false) {
   const blockId = (node as any).temp_id || generateId();
 
   switch (node.type) {
@@ -91,12 +92,12 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
       createHeadingBlock(blockId, parentId, node, changeMap, author);
       break;
     case 'paragraph':
-      processParagraph(blockId, parentId, node, changeMap, author, isStandaloneParagraph);
+      processParagraph(blockId, parentId, node, changeMap, author, sourceText, isStandaloneParagraph);
       break;
     case 'list':
       node.children.forEach((item, index) => {
         const seq = (node.ordered && index === 0) ? '1' : 'auto';
-        processNode(item, parentId, changeMap, author, { type: node.ordered ? 'ordered' : 'bullet', level: (listInfo.level || 0) + 1, seq });
+        processNode(item, parentId, changeMap, author, sourceText, { type: node.ordered ? 'ordered' : 'bullet', level: (listInfo.level || 0) + 1, seq });
       });
       break;
     case 'listItem':
@@ -171,7 +172,7 @@ function createListItemBlock(blockId: string, parentId: string, node: ListItem, 
                 childNode.children.forEach(item => {
                     const nestedBlockId = generateId();
                     nestedListChildrenIds.push(nestedBlockId);
-                    processNode({ ...item, temp_id: nestedBlockId }, blockId, changeMap, author, { ...listInfo, level: (listInfo.level || 0) + 1 });
+                    processNode({ ...item, temp_id: nestedBlockId }, blockId, changeMap, author, sourceText, { ...listInfo, level: (listInfo.level || 0) + 1 });
                 });
             }
         });
@@ -289,7 +290,7 @@ function createBlockquote(blockId: string, parentId: string, node: Blockquote, c
     node.children.forEach(child => {
         const childBlockId = generateId();
         childrenIds.push(childBlockId);
-        processNode({ ...child, temp_id: childBlockId }, blockId, changeMap, author);
+        processNode({ ...child, temp_id: childBlockId }, blockId, changeMap, author, sourceText);
     });
 
     const quoteContainer = {
@@ -331,8 +332,14 @@ function createEquationBlock(blockId: string, parentId: string, node: Content, c
     addBlockToChangeMap(block, changeMap, parentId);
 }
 
-function processParagraph(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: string, isStandalone: boolean) {
-    const inlineMathIndex = node.children.findIndex(child => child.type === 'inlineMath');
+function processParagraph(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: string, sourceText: string, isStandalone: boolean) {
+    const inlineMathIndex = node.children.findIndex(child => {
+        if (child.type === 'inlineMath' && child.position) {
+            const rawText = sourceText.substring(child.position.start.offset, child.position.end.offset);
+            return rawText.startsWith('$$');
+        }
+        return false;
+    });
 
     if (inlineMathIndex > -1) {
         const beforeChildren = node.children.slice(0, inlineMathIndex);
@@ -412,9 +419,9 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
                 attribs += `*${activeFormats.join('*')}+${node.value.length.toString(36)}`;
             } else if (node.type === 'inlineMath') {
                 const equationContent = (node as any).value;
-                const equationNum = addFormat('equation', equationContent);
-                const objectIdNum = addFormat('objectID', generateObjectId());
-                const equationFormats = [...activeFormats, equationNum, objectIdNum].sort((a, b) => a - b);
+                const equationAttribNum = addFormat('equation', equationContent);
+                const objectIDAttribNum = addFormat('objectID', generateObjectId());
+                const equationFormats = [...activeFormats, equationAttribNum, objectIDAttribNum].sort((a, b) => a - b);
                 text += equationContent;
                 attribs += `*${equationFormats.join('*')}+${equationContent.length.toString(36)}`;
             } else if (['strong', 'emphasis', 'delete'].includes(node.type)) {
