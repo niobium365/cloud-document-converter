@@ -1,0 +1,107 @@
+{
+    "member_id": "74848143561732",
+    "uuid": "cc2bc8f2-849e-45af-ba95-dfe4dfe8b663",
+    "page_id": "BruKdOTaSoTdJRxjNagcioImn6J",
+    "change_map": {
+        "BruKdOTaSoTdJRxjNagcioImn6J": {
+            "id": "BruKdOTaSoTdJRxjNagcioImn6J",
+            "version": 464,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "XwTqdx3o8oKDz2x8XDTcsy2Injc"
+                        }
+                    },
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "IEVLddIpNoVju9xCdpucNuo5nkb"
+                        }
+                    }
+                ]
+            }
+        },
+        "IEVLddIpNoVju9xCdpucNuo5nkb": {
+            "id": "IEVLddIpNoVju9xCdpucNuo5nkb",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "isv",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "data": {
+                                    "data": "graph LR\nA --> B\nC --> D",
+                                    "theme": "default",
+                                    "view": "chart"
+                                },
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J",
+                                "app_block_id": "",
+                                "block_type_id": "blk_631fefbbae02400430b8f9f4",
+                                "manifest": {
+                                    "view_type": "block_h5",
+                                    "app_version": "0.0.100"
+                                },
+                                "comment_details": {}
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "XwTqdx3o8oKDz2x8XDTcsy2Injc": {
+            "id": "XwTqdx3o8oKDz2x8XDTcsy2Injc",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "text": {
+                                            "0": "Normal paragraph"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+g"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

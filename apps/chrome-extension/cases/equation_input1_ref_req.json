@@ -1,0 +1,130 @@
+{
+    "member_id": "48541167518425",
+    "uuid": "5bab8a3f-e1b4-473a-bd51-fb30fc40a667",
+    "page_id": "BruKdOTaSoTdJRxjNagcioImn6J",
+    "change_map": {
+        "BruKdOTaSoTdJRxjNagcioImn6J": {
+            "id": "BruKdOTaSoTdJRxjNagcioImn6J",
+            "version": 508,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "X9p7dgEefoLB5exCnTJcF2aSnXc"
+                        }
+                    },
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "Gf3zdt7sYogyigxLgngccpDbn7f"
+                        }
+                    }
+                ]
+            }
+        },
+        "Gf3zdt7sYogyigxLgngccpDbn7f": {
+            "id": "Gf3zdt7sYogyigxLgngccpDbn7f",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "abcy=f(x)def"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+3*0*1*2+6*0+3"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ],
+                                            "1": [
+                                                "equation",
+                                                "y=f(x)"
+                                            ],
+                                            "2": [
+                                                "objectID",
+                                                "Ao1RNcEp"
+                                            ]
+                                        },
+                                        "nextNum": 3
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "X9p7dgEefoLB5exCnTJcF2aSnXc": {
+            "id": "X9p7dgEefoLB5exCnTJcF2aSnXc",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "Normal paragraph"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+g"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1,
+                                        "attribToNum": {
+                                            "author,6955273262934802433": 0
+                                        }
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

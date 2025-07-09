@@ -1,0 +1,438 @@
+{
+    "member_id": "60349019441937",
+    "uuid": "1f650925-6c41-4f72-b552-fbebc8b8e637",
+    "page_id": "BruKdOTaSoTdJRxjNagcioImn6J",
+    "change_map": {
+        "BruKdOTaSoTdJRxjNagcioImn6J": {
+            "id": "BruKdOTaSoTdJRxjNagcioImn6J",
+            "version": 632,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "ErizdzdhOo7gcGx6CsfcPBK6nje"
+                        }
+                    },
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "GnBUdppxho4jgjxenTkcRADSnCc"
+                        }
+                    }
+                ]
+            }
+        },
+        "O2DhdJvZEoWfWQxBPGYccOCFnDc": {
+            "id": "O2DhdJvZEoWfWQxBPGYccOCFnDc",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "a"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+1"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1,
+                                        "attribToNum": {
+                                            "author,6955273262934802433": 0
+                                        }
+                                    }
+                                },
+                                "folded": false,
+                                "align": "left",
+                                "parent_id": "SqMUdJve1o7zd8xhXSvcyuvSnwc"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "SqMUdJve1o7zd8xhXSvcyuvSnwc": {
+            "id": "SqMUdJve1o7zd8xhXSvcyuvSnwc",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "table_cell",
+                                "children": [
+                                    "O2DhdJvZEoWfWQxBPGYccOCFnDc"
+                                ],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "parent_id": "GnBUdppxho4jgjxenTkcRADSnCc"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "QhVydxoDyojjiXxyew3cV7yinyb": {
+            "id": "QhVydxoDyojjiXxyew3cV7yinyb",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "c"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+1"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1,
+                                        "attribToNum": {
+                                            "author,6955273262934802433": 0
+                                        }
+                                    }
+                                },
+                                "folded": false,
+                                "align": "left",
+                                "parent_id": "AkSodbGQcoihUNxOHEScZ7T5nZc"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "AkSodbGQcoihUNxOHEScZ7T5nZc": {
+            "id": "AkSodbGQcoihUNxOHEScZ7T5nZc",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "table_cell",
+                                "children": [
+                                    "QhVydxoDyojjiXxyew3cV7yinyb"
+                                ],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "parent_id": "GnBUdppxho4jgjxenTkcRADSnCc"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "QgbbdNAifobvCFxoM2Ic2hcTnpf": {
+            "id": "QgbbdNAifobvCFxoM2Ic2hcTnpf",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "b"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+1"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1,
+                                        "attribToNum": {
+                                            "author,6955273262934802433": 0
+                                        }
+                                    }
+                                },
+                                "folded": false,
+                                "align": "left",
+                                "parent_id": "RrKTd4UEyoCw7QxNdGgcLJODnWg"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "RrKTd4UEyoCw7QxNdGgcLJODnWg": {
+            "id": "RrKTd4UEyoCw7QxNdGgcLJODnWg",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "table_cell",
+                                "children": [
+                                    "QgbbdNAifobvCFxoM2Ic2hcTnpf"
+                                ],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "parent_id": "GnBUdppxho4jgjxenTkcRADSnCc"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "XwEJdXiG2oUrUlx6Ml9chMMLngN": {
+            "id": "XwEJdXiG2oUrUlx6Ml9chMMLngN",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "d"
+                                        },
+                                        "attribs": {
+                                            "0": "*0*1+1"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ],
+                                            "1": [
+                                                "bold",
+                                                "true"
+                                            ]
+                                        },
+                                        "nextNum": 2,
+                                        "attribToNum": {
+                                            "author,6955273262934802433": 0,
+                                            "bold,true": 1
+                                        }
+                                    }
+                                },
+                                "folded": false,
+                                "align": "left",
+                                "parent_id": "MJi0dHe7ooO0Mtxclc3cOaxUnBf"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "MJi0dHe7ooO0Mtxclc3cOaxUnBf": {
+            "id": "MJi0dHe7ooO0Mtxclc3cOaxUnBf",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "table_cell",
+                                "children": [
+                                    "XwEJdXiG2oUrUlx6Ml9chMMLngN"
+                                ],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "parent_id": "GnBUdppxho4jgjxenTkcRADSnCc"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "GnBUdppxho4jgjxenTkcRADSnCc": {
+            "id": "GnBUdppxho4jgjxenTkcRADSnCc",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "table",
+                                "children": [
+                                    "SqMUdJve1o7zd8xhXSvcyuvSnwc",
+                                    "RrKTd4UEyoCw7QxNdGgcLJODnWg",
+                                    "AkSodbGQcoihUNxOHEScZ7T5nZc",
+                                    "MJi0dHe7ooO0Mtxclc3cOaxUnBf"
+                                ],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "columns_id": [
+                                    "col828d2669-9cff-4b1a-98b3-cc18e6bac2e4",
+                                    "col1432096d-2121-4a14-988b-75824146c05b"
+                                ],
+                                "rows_id": [
+                                    "rowc346846f-4bd4-48b5-a9df-90b17e194930",
+                                    "rowdf0a1a8b-48ae-4201-ae4b-07461d41dad9"
+                                ],
+                                "column_set": {
+                                    "col828d2669-9cff-4b1a-98b3-cc18e6bac2e4": {
+                                        "column_width": 200
+                                    },
+                                    "col1432096d-2121-4a14-988b-75824146c05b": {
+                                        "column_width": 200
+                                    }
+                                },
+                                "cell_set": {
+                                    "rowc346846f-4bd4-48b5-a9df-90b17e194930col828d2669-9cff-4b1a-98b3-cc18e6bac2e4": {
+                                        "block_id": "SqMUdJve1o7zd8xhXSvcyuvSnwc",
+                                        "merge_info": {
+                                            "row_span": 1,
+                                            "col_span": 1
+                                        }
+                                    },
+                                    "rowdf0a1a8b-48ae-4201-ae4b-07461d41dad9col828d2669-9cff-4b1a-98b3-cc18e6bac2e4": {
+                                        "block_id": "AkSodbGQcoihUNxOHEScZ7T5nZc",
+                                        "merge_info": {
+                                            "row_span": 1,
+                                            "col_span": 1
+                                        }
+                                    },
+                                    "rowc346846f-4bd4-48b5-a9df-90b17e194930col1432096d-2121-4a14-988b-75824146c05b": {
+                                        "block_id": "RrKTd4UEyoCw7QxNdGgcLJODnWg",
+                                        "merge_info": {
+                                            "row_span": 1,
+                                            "col_span": 1
+                                        }
+                                    },
+                                    "rowdf0a1a8b-48ae-4201-ae4b-07461d41dad9col1432096d-2121-4a14-988b-75824146c05b": {
+                                        "block_id": "MJi0dHe7ooO0Mtxclc3cOaxUnBf",
+                                        "merge_info": {
+                                            "row_span": 1,
+                                            "col_span": 1
+                                        }
+                                    }
+                                },
+                                "header_row": true,
+                                "header_column": true,
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "ErizdzdhOo7gcGx6CsfcPBK6nje": {
+            "id": "ErizdzdhOo7gcGx6CsfcPBK6nje",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "Normal paragraph"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+g"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1,
+                                        "attribToNum": {
+                                            "author,6955273262934802433": 0
+                                        }
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

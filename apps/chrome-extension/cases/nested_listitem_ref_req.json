@@ -1,0 +1,214 @@
+{
+    "member_id": "60349019441937",
+    "uuid": "45eaa48a-4b11-40c6-96e1-63e1b5a07571",
+    "page_id": "BruKdOTaSoTdJRxjNagcioImn6J",
+    "change_map": {
+        "BruKdOTaSoTdJRxjNagcioImn6J": {
+            "id": "BruKdOTaSoTdJRxjNagcioImn6J",
+            "version": 635,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "PFSTdFRpToywnxx0usmcmFGunJh"
+                        }
+                    },
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "P45LdQxkGoKFfvxNjqDcpyxZnzd"
+                        }
+                    },
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "WHgBdsncco6uaSxz1lZcw7WSnAc"
+                        }
+                    }
+                ]
+            }
+        },
+        "Lg5ldBd4co71THxhnSdckdQYnGe": {
+            "id": "Lg5ldBd4co71THxhnSdckdQYnGe",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "ordered",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "text": {
+                                            "0": "sub item1"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+9"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "level": 1,
+                                "folded": false,
+                                "seq": "1",
+                                "parent_id": "WHgBdsncco6uaSxz1lZcw7WSnAc"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "WHgBdsncco6uaSxz1lZcw7WSnAc": {
+            "id": "WHgBdsncco6uaSxz1lZcw7WSnAc",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "ordered",
+                                "children": [
+                                    "Lg5ldBd4co71THxhnSdckdQYnGe"
+                                ],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "text": {
+                                            "0": "test listItem"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+d"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "level": 1,
+                                "folded": false,
+                                "seq": "1",
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "P45LdQxkGoKFfvxNjqDcpyxZnzd": {
+            "id": "P45LdQxkGoKFfvxNjqDcpyxZnzd",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "ordered",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "text": {
+                                            "0": "test listItem2"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+e"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "level": 1,
+                                "folded": false,
+                                "seq": "auto",
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "PFSTdFRpToywnxx0usmcmFGunJh": {
+            "id": "PFSTdFRpToywnxx0usmcmFGunJh",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "text": {
+                                            "0": "Normal paragraph"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+g"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

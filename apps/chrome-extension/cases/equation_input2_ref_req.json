@@ -1,0 +1,224 @@
+{
+    "member_id": "48541167518425",
+    "uuid": "b32c0b4e-0576-4c09-89c5-fe872dfe191d",
+    "page_id": "BruKdOTaSoTdJRxjNagcioImn6J",
+    "change_map": {
+        "BruKdOTaSoTdJRxjNagcioImn6J": {
+            "id": "BruKdOTaSoTdJRxjNagcioImn6J",
+            "version": 543,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "BiFVdy5qKoRROPxJSo3cgg95nBd"
+                        }
+                    },
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "DCOsd7zbJopvS4xh9tkcIccynHb"
+                        }
+                    },
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "FyXrdrxn7oRJCRxj8LScRVn2nkd"
+                        }
+                    },
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "XGkPdWYaMoFKvYxUFLVc9faVndb"
+                        }
+                    }
+                ]
+            }
+        },
+        "XGkPdWYaMoFKvYxUFLVc9faVndb": {
+            "id": "XGkPdWYaMoFKvYxUFLVc9faVndb",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "text": {
+                                            "0": "abc"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+3"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "FyXrdrxn7oRJCRxj8LScRVn2nkd": {
+            "id": "FyXrdrxn7oRJCRxj8LScRVn2nkd",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "text": {
+                                            "0": " "
+                                        },
+                                        "attribs": {
+                                            "0": "*0*1*2+1"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ],
+                                            "1": [
+                                                "equation",
+                                                "y=f(x)\n"
+                                            ],
+                                            "2": [
+                                                "objectID",
+                                                "3IHcA0W7"
+                                            ]
+                                        },
+                                        "nextNum": 3
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J",
+                                "align": "center"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "DCOsd7zbJopvS4xh9tkcIccynHb": {
+            "id": "DCOsd7zbJopvS4xh9tkcIccynHb",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "text": {
+                                            "0": "def"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+3"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "BiFVdy5qKoRROPxJSo3cgg95nBd": {
+            "id": "BiFVdy5qKoRROPxJSo3cgg95nBd",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "text": {
+                                            "0": "Normal paragraph"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+g"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "BruKdOTaSoTdJRxjNagcioImn6J"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}
