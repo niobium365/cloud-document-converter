@@ -11,6 +11,13 @@ const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
 const generateId = (): string => Array.from({ length: 27 }).map(() => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join('');
 const generateObjectId = (): string => Array.from({ length: 8 }).map(() => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join('');
 
+/**
+ * Generate a UUID v4
+ */
+const generateUuid = (): string => {
+    return crypto.randomUUID()
+}
+
 interface ChangeMap {
   [key: string]: any;
 }
@@ -105,7 +112,7 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
       createListItemBlock(blockId, parentId, node, changeMap, author, sourceText, listInfo);
       break;
     case 'table':
-      createTableBlock(blockId, parentId, node, changeMap, author);
+      createTableBlock(node, parentId, author, changeMap);
       break;
     case 'code':
           if (node.lang === 'mermaid') {
@@ -198,52 +205,69 @@ function createListItemBlock(blockId: string, parentId: string, node: ListItem, 
     addBlockToChangeMap(block, changeMap, parentId);
 }
 
-function createTableBlock(blockId: string, parentId: string, node: Table, changeMap: ChangeMap, author: string) {
-  const rows = node.children.length;
-  const cols = node.children[0]?.children.length || 0;
+function createTableBlock(node: Table, parentId: string, author: string, changeMap: ChangeMap) {
+    const blockId = generateId();
+    const rowCount = node.children.length;
+    const colCount = node.children[0]?.children.length || 0;
 
-  const cell_ids = [];
-  for (let i = 0; i < rows; i++) {
-      for (let j = 0; j < cols; j++) {
-          const cellId = generateId();
-          cell_ids.push(cellId);
-          const cellNode = node.children[i]?.children[j];
-          if (cellNode) {
-              const textBlockId = generateId();
-              const content = processPhrasingContent(cellNode.children, author);
-              const textData = createTextBlockData(content, author);
-              const textBlock = {
-                  obj_id: textBlockId,
-                  parent_id: cellId,
-                  type: 'text',
-                  ...textData,
-              };
-              addBlockToChangeMap(textBlock, changeMap, cellId, false);
+    const rowIds = Array.from({ length: rowCount }, () => 'row' + generateUuid());
+    const columnIds = Array.from({ length: colCount }, () => 'col' + generateUuid());
+    const cellIds: string[][] = [];
 
-              const cellBlock = {
-                  obj_id: cellId,
-                  parent_id: blockId,
-                  type: 'table_cell',
-                  children: [],
-                  comments: [],
-                  revisions: [],
-                  author: author,                  
-                  children: [textBlockId],
-              };
-              addBlockToChangeMap(cellBlock, changeMap, parentId, false);
-          }
-      }
-  }
-  
-  const tableBlockData = {
-      obj_id: blockId,
-      parent_id: parentId,
-      type: 'table',
-      grid_row_count: rows,
-      grid_col_count: cols,
-      children: cell_ids,
-  };
-  addBlockToChangeMap(tableBlockData, changeMap, parentId);
+    for (let i = 0; i < rowCount; i++) {
+        const rowCellIds: string[] = [];
+        for (let j = 0; j < colCount; j++) {
+            const cellId = generateId();
+            rowCellIds.push(cellId);
+            const cellNode = node.children[i]?.children[j];
+            if (cellNode) {
+                const textBlockId = generateId();
+                const content = processPhrasingContent(cellNode.children, author);
+                const textData = createTextBlockData(content, author);
+                const textBlock = {
+                    obj_id: textBlockId,
+                    parent_id: cellId,
+                    type: 'text',
+                    ...textData,
+                };
+                addBlockToChangeMap(textBlock, changeMap, cellId, false);
+
+                const cellBlock = {
+                    obj_id: cellId,
+                    parent_id: blockId,
+                    type: 'table_cell',
+                    children: [],
+                    comments: [],
+                    revisions: [],
+                    author: author,                  
+                    children: [textBlockId],
+                };
+                addBlockToChangeMap(cellBlock, changeMap, blockId, false);
+            }
+        }
+        cellIds.push(rowCellIds);
+    }
+
+    const tableBlock = {
+        obj_id: blockId,
+        parent_id: parentId,
+        type: 'table',
+        children: cellIds.flat(),
+        author: author,
+        columns_id: columnIds,
+        rows_id: rowIds,
+        column_set: Object.fromEntries(columnIds.map(id => [id, { column_width: 200 }])) as any,
+        cell_set: Object.fromEntries(
+            cellIds.flatMap((row, r) =>
+                row.map((cId, c) => {
+                    const key = rowIds[r] + columnIds[c];
+                    const val = { block_id: cId, merge_info: { row_span: 1, col_span: 1 } };
+                    return [key, val] as [string, any];
+                })
+            )
+        ) as any,
+    };
+    addBlockToChangeMap(tableBlock, changeMap, parentId, true);
 }
 
 function createCodeBlock(blockId: string, parentId: string, node: Code, changeMap: ChangeMap, author: string) {
