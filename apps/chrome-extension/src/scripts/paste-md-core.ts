@@ -276,26 +276,47 @@ function createTableBlock(node: Table, parentId: string, author: string, changeM
 }
 
 function createCodeBlock(blockId: string, parentId: string, node: Code, changeMap: ChangeMap, author: string) {
-  const codeContainerId = generateId();
-  
-  const textContent = { text: node.value, attribs: `+${node.value.length.toString(36)}`, formatTypes: { '0': ['author', author] } };
-  const textData = createTextBlockData(textContent, author);
-  const textBlock = {
-      obj_id: blockId,
-      parent_id: codeContainerId,
-      type: 'text',
-      ...textData,
+  const textContent = {
+    text: node.value,
+    attribs: `*0+${node.value.length}`,
+    formatTypes: { '0': ['author', author] },
   };
-  addBlockToChangeMap(textBlock, changeMap, parentId, false);
 
-  const codeContainer = {
-      obj_id: codeContainerId,
-      parent_id: parentId,
-      type: 'code',
-      language: node.lang || 'plaintext',
-      children: [blockId],
+  const codeBlock = {
+    obj_id: blockId,
+    parent_id: parentId,
+    type: 'code',
+    language: node.lang || '',
+    wrap: true,
+    folded: false,
+    is_language_picked: true,
+    author: author,
+    children: [],
+    comments: [],
+    revisions: [],
+    caption: {
+      text: {
+        initialAttributedTexts: {
+          text: { '0': '\n' },
+          attribs: { '0': '|1+1' },
+        },
+        apool: { numToAttrib: {}, nextNum: 0 },
+      },
+    },
+    text: {
+      initialAttributedTexts: {
+        text: { '0': textContent.text },
+        attribs: { '0': textContent.attribs },
+        cols: {},
+        rows: {},
+      },
+      apool: {
+        numToAttrib: textContent.formatTypes,
+        nextNum: Object.keys(textContent.formatTypes).length,
+      },
+    },
   };
-  addBlockToChangeMap(codeContainer, changeMap, parentId);
+  addBlockToChangeMap(codeBlock, changeMap, parentId, true);
 }
 
 function createDividerBlock(blockId: string, parentId: string, changeMap: ChangeMap) {
