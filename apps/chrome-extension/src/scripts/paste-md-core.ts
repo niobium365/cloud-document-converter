@@ -327,35 +327,32 @@ function createQuoteContainerBlock(blockId: string, parentId: string, node: Bloc
 
 function createEquationBlock(blockId: string, parentId: string, node: Content, changeMap: ChangeMap, author: string) {
     const equationContent = (node as any).value;
-    const objectId = generateObjectId();
-
-    const equationBlock = {
+    const block = {
         obj_id: blockId,
         parent_id: parentId,
-        type: 'equation',
-        author: author,
-        align: 'center',
-        equation: {
+        type: 'text',
+        children: [],
+        comments: [],
+        revisions: [],
+        author,
+        text: {
             initialAttributedTexts: {
-                text: {
-                    '0': ' '
-                },
-                attribs: {
-                    '0': '*0*1*2+1'
-                }
+                text: { '0': ' ' },
+                attribs: { '0': `*0*1*2+1` },
             },
             apool: {
                 numToAttrib: {
                     '0': ['author', author],
                     '1': ['equation', equationContent],
-                    '2': ['objectID', objectId]
+                    '2': ['objectID', generateObjectId()],
                 },
-                nextNum: 3
-            }
-        }
+                nextNum: 3,
+            },
+                },
+        folded: false,
+        align: 'center',
     };
-
-    addBlockToChangeMap(equationBlock, changeMap, parentId);
+    addBlockToChangeMap(block, changeMap, parentId);
 }
 
 function processParagraph(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: string, sourceText: string, isStandalone: boolean) {
