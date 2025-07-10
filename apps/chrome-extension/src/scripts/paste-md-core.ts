@@ -157,6 +157,12 @@ function createTextBlockData(content: TextProcessingResult, author: string) {
 }
 
 function createHeadingBlock(blockId: string, parentId: string, node: Heading, changeMap: ChangeMap, author: string) {
+  // Modify node.children directly to remove leading numbers before processing
+  node.children.forEach(child => {
+    if (child.type === 'text') {
+      child.value = child.value.replace(/^\d+(\.\d+)*\.?\s*/, '');
+    }
+  });
   const content = processPhrasingContent(node.children, author);
   const textData = createTextBlockData(content, author);
   const block = {
@@ -167,6 +173,8 @@ function createHeadingBlock(blockId: string, parentId: string, node: Heading, ch
     comments: [],
     revisions: [],
     folded: false,
+    seq: "auto",
+    seq_level: "auto",
     ...textData,
   };
   addBlockToChangeMap(block, changeMap, parentId);
