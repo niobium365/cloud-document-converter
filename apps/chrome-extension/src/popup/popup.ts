@@ -69,8 +69,8 @@ if (pasteMarkdownButton) {
     await chrome.windows.create({
       url: inputUrl,
       type: 'popup',
-      width: 800,
-      height: 600,
+      width: 1024,
+      height: 768,
       focused: true,
     })
 

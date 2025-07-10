@@ -78,10 +78,10 @@ const main = async () => {
   const markdown = Docx.stringify(root)
 
   if (!window.document.hasFocus()) {
-    const confirmed = await confirm()
-    if (!confirmed) {
-      return
-    }
+    // const confirmed = await confirm()
+    // if (!confirmed) {
+    //   return
+    // }
   }
 
   // clipboard.write() method may be intercepted and overridden by websites
