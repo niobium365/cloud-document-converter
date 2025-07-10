@@ -109,7 +109,7 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
       });
       break;
     case 'listItem':
-      if (node.checked !== undefined) {
+      if (!!node.checked) {
         createTodoBlock(blockId, parentId, node, changeMap, author, sourceText);
       } else {
         createListItemBlock(blockId, parentId, node, changeMap, author, sourceText, listInfo);
