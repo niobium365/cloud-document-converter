@@ -45,6 +45,19 @@ scp jdu@192.168.23.133:~/cloud-document-converter/apps/chrome-extension/ce.zip /
 # pnpm run build:firefox # build firefox extension
 ```
 
+```
+const dbg = document.createElement('div');
+dbg.style.cssText = 'position:fixed;bottom:0;left:0;padding:4px;
+                     background:rgba(0,0,0,0.7);color:#fff;z-index:9999';
+document.body.appendChild(dbg);
+// then inside your click handler:
+dbg.textContent = 'block_id: ' + blockId;
+
+document.getSelection().anchorNode.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement
+<div class=​"block docx-text-block focused" data-block-type=​"text" data-block-id=​"5" data-record-id=​"Q7oTd6YKzoUarIxzUPscni7Snzh">​<div class=​"text-block-wrapper">​…​</div>​</div>​
+
+```
+
 ### Run
 
 [web-ext](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/#test-and-degug-an-extention) is a command-line tool designed to speed up and simplify development. 

@@ -1,4 +1,13 @@
 {
+    "compilerOptions": {
+        "target": "es2020",
+        "module": "esnext",
+        "moduleResolution": "nodenext",
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "sourceMap": true,
+        "strict": true
+      },    
   "files": [],
   "references": [
     { "path": "./tsconfig.node.json" },
