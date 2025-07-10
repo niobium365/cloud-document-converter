@@ -655,9 +655,9 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
         const formatStr = seg.formats.map(f => {
             if (f.includes('-')) {
                 const [_type, num] = f.split('-');
-                return `*${num}`;
+                return `*${(num * 1).toString(36)}`;
             }
-            return `*${getFormatNum(f)}`;
+            return `*${getFormatNum(f).toString(36)}`;
         }).join('');
         const text = seg.text;
         
@@ -671,7 +671,7 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
             
             let result = '';
             if (part1.length > 0) {
-                result += `*0${formatStr}|${newlineCount}+${part1.length.toString(36)}`;
+                result += `*0${formatStr}|${newlineCount.toString(36)}+${part1.length.toString(36)}`;
             }
             if (part2.length > 0) {
                 result += `*0${formatStr}+${part2.length.toString(36)}`;
