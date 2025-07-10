@@ -109,7 +109,11 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
       });
       break;
     case 'listItem':
-      createListItemBlock(blockId, parentId, node, changeMap, author, sourceText, listInfo);
+      if (node.checked !== undefined) {
+        createTodoBlock(blockId, parentId, node, changeMap, author, sourceText);
+      } else {
+        createListItemBlock(blockId, parentId, node, changeMap, author, sourceText, listInfo);
+      }
       break;
     case 'table':
       createTableBlock(node, parentId, author, changeMap);
@@ -166,6 +170,29 @@ function createHeadingBlock(blockId: string, parentId: string, node: Heading, ch
     ...textData,
   };
   addBlockToChangeMap(block, changeMap, parentId);
+}
+
+function createTodoBlock(blockId: string, parentId: string, node: ListItem, changeMap: ChangeMap, author: string, sourceText: string) {
+    const firstChild = node.children[0];
+    if (firstChild && firstChild.type === 'paragraph') {
+        const content = processPhrasingContent(firstChild.children, author);
+        const textData = createTextBlockData(content, author);
+
+        const todoBlock = {
+            obj_id: blockId,
+            parent_id: parentId,
+            type: 'todo',
+            children: [],
+            comments: [],
+            revisions: [],
+            author: author,
+            text: textData.text,
+            done: node.checked === true,
+            folded: false,
+        };
+
+        addBlockToChangeMap(todoBlock, changeMap, parentId, true);
+    }
 }
 
 function createListItemBlock(blockId: string, parentId: string, node: ListItem, changeMap: ChangeMap, author: string, sourceText: string, listInfo: any) {
