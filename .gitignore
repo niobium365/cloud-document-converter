@@ -10,3 +10,6 @@ dist
 # turborepo
 .turbo
 
+*.output.json
+
+

@@ -1,0 +1,148 @@
+{
+    "member_id": "55893926372148",
+    "uuid": "b9b856cf-e497-4f23-8c2f-d58505b907fa",
+    "page_id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd",
+    "change_map": {
+        "GU8Ad2RYIo8yMzxKxcOcGy0mnvd": {
+            "id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd",
+            "version": 176,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "SkOZdZdN9oAfwKxsJQxc1LeYnKd"
+                        }
+                    },
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "TzG8dSgIiomQ2zxlLAfcobE4ned"
+                        }
+                    }
+                ]
+            }
+        },
+        "XGJ3dSUYnoAdIsxktpqcXT8Qn9g": {
+            "id": "XGJ3dSUYnoAdIsxktpqcXT8Qn9g",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "abc\ndefgh\nijk"
+                                        },
+                                        "attribs": {
+                                            "0": "*0|2+a*0+3"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "TzG8dSgIiomQ2zxlLAfcobE4ned"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "TzG8dSgIiomQ2zxlLAfcobE4ned": {
+            "id": "TzG8dSgIiomQ2zxlLAfcobE4ned",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "callout",
+                                "children": [
+                                    "XGJ3dSUYnoAdIsxktpqcXT8Qn9g"
+                                ],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "emoji_id": "eggplant",
+                                "emoji_value": "1f3d5-fe0f",
+                                "background_color": "rgb(255,245,235)",
+                                "border_color": "rgb(254,212,164)",
+                                "text_color": "",
+                                "align": "left",
+                                "parent_id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "SkOZdZdN9oAfwKxsJQxc1LeYnKd": {
+            "id": "SkOZdZdN9oAfwKxsJQxc1LeYnKd",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "Normal paragraph"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+g"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

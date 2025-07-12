@@ -1,0 +1,138 @@
+{
+    "member_id": "49573595512047",
+    "uuid": "e021df40-6054-4465-bd1b-b4cbde4e0760",
+    "page_id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd",
+    "change_map": {
+        "GU8Ad2RYIo8yMzxKxcOcGy0mnvd": {
+            "id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd",
+            "version": 162,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "TrMgdrx3Po3dbGxQ5UccRdAOnBR"
+                        }
+                    },
+                    {
+                        "p": [
+                            "children",
+                            0
+                        ],
+                        "action": {
+                            "li": "W4pCdVuuXo0k1pxojPxcNNiMnff"
+                        }
+                    }
+                ]
+            }
+        },
+        "W4pCdVuuXo0k1pxojPxcNNiMnff": {
+            "id": "W4pCdVuuXo0k1pxojPxcNNiMnff",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "code",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "fn foo;"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+7"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "language": "Rust",
+                                "wrap": true,
+                                "parent_id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd",
+                                "folded": false,
+                                "caption": {
+                                    "text": {
+                                        "initialAttributedTexts": {
+                                            "text": {
+                                                "0": "\n"
+                                            },
+                                            "attribs": {
+                                                "0": "|1+1"
+                                            }
+                                        },
+                                        "apool": {
+                                            "numToAttrib": {},
+                                            "nextNum": 0
+                                        }
+                                    }
+                                },
+                                "is_language_picked": true
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "TrMgdrx3Po3dbGxQ5UccRdAOnBR": {
+            "id": "TrMgdrx3Po3dbGxQ5UccRdAOnBR",
+            "version": 0,
+            "payload": {
+                "ops": [
+                    {
+                        "p": [],
+                        "action": {
+                            "oi": {
+                                "type": "text",
+                                "children": [],
+                                "comments": [],
+                                "revisions": [],
+                                "author": "6955273262934802433",
+                                "text": {
+                                    "initialAttributedTexts": {
+                                        "cols": {},
+                                        "rows": {},
+                                        "text": {
+                                            "0": "ABC"
+                                        },
+                                        "attribs": {
+                                            "0": "*0+3"
+                                        }
+                                    },
+                                    "apool": {
+                                        "numToAttrib": {
+                                            "0": [
+                                                "author",
+                                                "6955273262934802433"
+                                            ]
+                                        },
+                                        "nextNum": 1
+                                    }
+                                },
+                                "folded": false,
+                                "parent_id": "GU8Ad2RYIo8yMzxKxcOcGy0mnvd"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}
