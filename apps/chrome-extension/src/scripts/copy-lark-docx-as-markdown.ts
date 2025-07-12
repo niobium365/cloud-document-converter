@@ -78,10 +78,16 @@ const main = async () => {
   const markdown = Docx.stringify(root)
 
   if (!window.document.hasFocus()) {
-    // const confirmed = await confirm()
-    // if (!confirmed) {
-    //   return
-    // }
+    // Give the document focus
+    // window.focus();
+    // // Remove focus from any focused element
+    // if (window.document.activeElement) {
+    //   window.document.activeElement.blur();
+    // }    
+    const confirmed = await confirm()
+    if (!confirmed) {
+      return
+    }
   }
 
   // clipboard.write() method may be intercepted and overridden by websites
