@@ -93,11 +93,12 @@ export function generateChangeMap(
 }
 
 function processNode(node: Content, parentId: string, changeMap: ChangeMap, author: string, sourceText: string, listInfo: { type?: 'ordered' | 'bullet', level?: number, seq?: string } = {}, isStandaloneParagraph: boolean = false) {
-  const blockId = (node as any).temp_id || generateId();
+    const blockId = (node as any).temp_id || generateId();
+    const nodeAsAny = node as any;
 
-  switch (node.type) {
+    switch (nodeAsAny.type) {
     case 'heading':
-      createHeadingBlock(blockId, parentId, node, changeMap, author);
+      createHeadingBlock(blockId, parentId, nodeAsAny, changeMap, author);
       break;
     case 'paragraph':
       processParagraph(blockId, parentId, node, changeMap, author, sourceText, isStandaloneParagraph);
@@ -116,7 +117,7 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
       }
       break;
     case 'table':
-      createTableBlock(node, parentId, author, changeMap);
+      createTableBlock(blockId, parentId, node, changeMap, author);
       break;
     case 'code':
           if (node.lang === 'mermaid') {
@@ -204,13 +205,10 @@ function createTodoBlock(blockId: string, parentId: string, node: ListItem, chan
 }
 
 function createListItemBlock(blockId: string, parentId: string, node: ListItem, changeMap: ChangeMap, author: string, sourceText: string, listInfo: any) {
-    const firstChild = node.children[0];
-    if (!firstChild || firstChild.type !== 'paragraph') return;
-
     const nestedListChildrenIds: string[] = [];
-    const nestedLists = node.children.slice(1);
-    if (nestedLists.length > 0) {
-        nestedLists.forEach(childNode => {
+    const nestedElements = node.children.slice(1);
+    if (nestedElements.length > 0) {
+        nestedElements.forEach(childNode => {
             if (childNode.type === 'list') {
                 // Process nested list and get the IDs of its items
                 childNode.children.forEach(item => {
@@ -218,11 +216,16 @@ function createListItemBlock(blockId: string, parentId: string, node: ListItem, 
                     nestedListChildrenIds.push(nestedBlockId);
                     processNode({ ...item, temp_id: nestedBlockId }, blockId, changeMap, author, sourceText, { ...listInfo, level: (listInfo.level || 0) + 1 });
                 });
+            } else {
+                const nestedBlockId = generateId();
+                nestedListChildrenIds.push(nestedBlockId);
+                processNode({ ...childNode, temp_id: nestedBlockId }, blockId, changeMap, author, sourceText, { ...listInfo, level: (listInfo.level || 0) + 1 });
             }
         });
     }
 
-    const content = processPhrasingContent(firstChild.children, author);
+    const paragraph = node.children.find(child => child.type === 'paragraph');
+    const content = paragraph ? processPhrasingContent((paragraph as Paragraph).children, author) : { text: '', zone_changesets: [] };
     const textData = createTextBlockData(content, author);
 
     const block = {
@@ -241,8 +244,7 @@ function createListItemBlock(blockId: string, parentId: string, node: ListItem, 
     addBlockToChangeMap(block, changeMap, parentId);
 }
 
-function createTableBlock(node: Table, parentId: string, author: string, changeMap: ChangeMap) {
-    const blockId = generateId();
+function createTableBlock(blockId: string, parentId: string, node: Table, changeMap: ChangeMap, author: string) {
     const rowCount = node.children.length;
     const colCount = node.children[0]?.children.length || 0;
 
