@@ -546,6 +546,8 @@ export const transformOperationsToPhrasingContents = (
         result.push(op);
       }
     }
+    // if(result.length > 0 && result[result.length - 1].insert === '\n')
+    //   return result.slice(0, -1);
     return result;
   };
 
@@ -1328,12 +1330,14 @@ export class Transformer {
             // Interleave with <br> tags
             const interleaved: mdast.PhrasingContent[] = [];
             nonEmptyGroups.forEach((group, index) => {
-              if (index > 0) {
-                interleaved.push({ type: 'html', value: '<br>' });
-              }
+              // if (index > 0) {
+              //   interleaved.push({ type: 'html', value: '<br>' });
+              // }
               interleaved.push(...group);
             });
             
+            if(interleaved.length > 0 && interleaved[interleaved.length - 1].type === 'html' && interleaved[interleaved.length - 1].value === '<br>')
+              return interleaved.slice(0, -1);
             return interleaved;
           }
         )
@@ -1407,13 +1411,38 @@ export class Transformer {
   }
 }
 
+export const customGfmTableToMarkdown = () => {
+  const original = gfmTableToMarkdown();
+  
+  return {
+    ...original,
+    handlers: {
+      ...original.handlers,
+      table(node: any, parent: any, context: any) {
+        const result = original.handlers.table(node, parent, context);
+        const lines = result.split('\n');
+        
+        // Replace separator row with exactly 3 hyphens per column
+        if (lines.length > 1) {
+          const separatorLine = lines[1];
+          const newSeparator = separatorLine.replace(/-+/g, '---');
+          lines[1] = newSeparator;
+          return lines.join('\n');
+        }
+        
+        return result;
+      }
+    }
+  };
+}
+
 export class Docx {
   static stringify(root: mdast.Root): string {
     return toMarkdown(root, {
       extensions: [
         gfmStrikethroughToMarkdown(),
         gfmTaskListItemToMarkdown(),
-        gfmTableToMarkdown(),
+        customGfmTableToMarkdown(),
         mathToMarkdown({
           singleDollarTextMath: true,
         }),
