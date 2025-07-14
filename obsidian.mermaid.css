@@ -1,0 +1,19 @@
+/* only shrink down graphs that exceed the container’s width */
+.mermaid svg {
+    display: block;       /* so margins work */
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;       /* center any block-level SVG */
+  }
+  
+  /* allow horizontal scrolling on overflow */
+  .mermaid {
+    overflow-x: auto;
+  }
+  
+  /* optional: on hover let you scroll the full-size graph */
+  .mermaid:hover svg {
+    max-width: none;
+  }
+  
