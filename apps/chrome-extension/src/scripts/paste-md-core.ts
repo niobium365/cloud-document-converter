@@ -214,7 +214,9 @@ function createListItemBlock(blockId: string, parentId: string, node: ListItem, 
                 childNode.children.forEach(item => {
                     const nestedBlockId = generateId();
                     nestedListChildrenIds.push(nestedBlockId);
-                    processNode({ ...item, temp_id: nestedBlockId }, blockId, changeMap, author, sourceText, { ...listInfo, level: (listInfo.level || 0) + 1 });
+                    const seq = (node.ordered && index === 0) ? '1' : 'auto';
+                    //processNode(item, parentId, changeMap, author, sourceText, { type: node.ordered ? 'ordered' : 'bullet', level: (listInfo.level || 0) + 1, seq });
+                    processNode({ ...item, temp_id: nestedBlockId }, blockId, changeMap, author, sourceText, { ...listInfo,  type: childNode.ordered ? 'ordered' : 'bullet', level: (listInfo.level || 0) + 1, seq });
                 });
             } else {
                 const nestedBlockId = generateId();
