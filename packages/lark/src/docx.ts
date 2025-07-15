@@ -461,7 +461,7 @@ export const mergeListItems = <T extends mdast.Nodes>(
     if (node.type === 'listItem') {
       const list: mdast.List = {
         type: 'list',
-        ...(typeof node.data?.seq === 'number'
+        ...((typeof node.data?.seq === 'number' || node.data?.seq === 'auto')
           ? {
               ordered: true,
               start: node.data.seq,
@@ -912,7 +912,7 @@ export class Transformer {
           ),
         }
 
-        if (typeof block.snapshot.seq === 'string') {
+        if (typeof block.snapshot.seq === 'string' && false) {
           // reset sequences state
           this.sequences = this.sequences.slice(0, depth)
 
@@ -1005,7 +1005,7 @@ export class Transformer {
           block,
           () => ({
             type: 'listItem',
-            spread: false, // tight list item to avoid blank line when nested
+            spread: true, // tight list item to avoid blank line when nested
             children: [],
             ...(block.type === BlockType.TODO
               ? { checked: Boolean(block.snapshot.done) }
@@ -1439,6 +1439,7 @@ export const customGfmTableToMarkdown = () => {
 export class Docx {
   static stringify(root: mdast.Root): string {
     return toMarkdown(root, {
+      bullet: '*',
       extensions: [
         gfmStrikethroughToMarkdown(),
         gfmTaskListItemToMarkdown(),
