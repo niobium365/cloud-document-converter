@@ -1419,7 +1419,8 @@ export const customGfmTableToMarkdown = () => {
     handlers: {
       ...original.handlers,
       table(node: any, parent: any, context: any) {
-        const result = original.handlers.table(node, parent, context);
+        let result = original.handlers.table(node, parent, context);
+        result = result.replace(/ +\|/g, ' |');
         const lines = result.split('\n');
         
         // Replace separator row with exactly 3 hyphens per column
@@ -1440,6 +1441,7 @@ export class Docx {
   static stringify(root: mdast.Root): string {
     return toMarkdown(root, {
       bullet: '*',
+      listItemIndent: 'one',
       extensions: [
         gfmStrikethroughToMarkdown(),
         gfmTaskListItemToMarkdown(),
