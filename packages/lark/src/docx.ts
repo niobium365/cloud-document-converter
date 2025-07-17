@@ -583,7 +583,16 @@ export const transformOperationsToPhrasingContents = (
                 ...op.attributes,
                 link: inlineComponent.data.raw_url,
               },
-              insert: op.insert + inlineComponent.data.title,
+              insert: /*op.insert*/ + inlineComponent.data.title,
+            } as Operation
+          }
+          if (inlineComponent.type === 'user') {
+            return {
+              attributes: {
+                ...op.attributes,
+                link: 'user://' + inlineComponent.data.uid,
+              },
+              insert: inlineComponent.data.uid, //op.insert + inlineComponent.data.title,
             } as Operation
           }
 
