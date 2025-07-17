@@ -1441,6 +1441,7 @@ export class Docx {
   static stringify(root: mdast.Root): string {
     return toMarkdown(root, {
       bullet: '*',
+      emphasis: '*',
       listItemIndent: 'one',
       extensions: [
         gfmStrikethroughToMarkdown(),
@@ -1450,7 +1451,7 @@ export class Docx {
           singleDollarTextMath: true,
         }),
       ],
-    })
+    }).replace(/\\_/g, '_');
   }
 
   get rootBlock(): PageBlock | null {
