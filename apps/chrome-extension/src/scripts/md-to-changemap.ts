@@ -144,8 +144,9 @@ async function main() {
     const changeMap = generateChangeMap(
       argv.pageBlockId,
       markdownContent,
-      argv.author || '6955273262934802433',
-      0
+      {author: argv.author || '6955273262934802433',
+      tenantId:'6875553877618360322',
+      },
     )
     
     // Write the output

@@ -245,7 +245,7 @@ const insertParagraph = async (
           }
       }      
       // Generate change map for the new markdown content
-      const contentChangeMap = generateChangeMap(pageBlockId, text, author);
+      const contentChangeMap = generateChangeMap(pageBlockId, text, {author, tenantId:window.SERVER_DATA.meta.tenantId});
       
       if(Object.keys(contentChangeMap).length === 0)
         return false;

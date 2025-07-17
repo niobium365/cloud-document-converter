@@ -64,7 +64,7 @@ function addBlockToChangeMap(block: any, changeMap: ChangeMap, parentId: string,
 export function generateChangeMap(
   pageBlockId: string,
   markdown: string,
-  author: string,
+  author: any,
 ): ChangeMap {
   const sourceText = markdown;
   const changeMap: ChangeMap = {
@@ -92,7 +92,7 @@ export function generateChangeMap(
   return changeMap;
 }
 
-function processNode(node: Content, parentId: string, changeMap: ChangeMap, author: string, sourceText: string, listInfo: { type?: 'ordered' | 'bullet', level?: number, seq?: string } = {}, isStandaloneParagraph: boolean = false) {
+function processNode(node: Content, parentId: string, changeMap: ChangeMap, author: any, sourceText: string, listInfo: { type?: 'ordered' | 'bullet', level?: number, seq?: string } = {}, isStandaloneParagraph: boolean = false) {
     const blockId = (node as any).temp_id || generateId();
     const nodeAsAny = node as any;
 
@@ -138,9 +138,9 @@ function processNode(node: Content, parentId: string, changeMap: ChangeMap, auth
   }
 }
 
-function createTextBlockData(content: TextProcessingResult, author: string) {
+function createTextBlockData(content: TextProcessingResult, author: any) {
     return {
-        author: author,
+        author: author.author,
         children: [],
         comments: [],
         revisions: [],
@@ -157,7 +157,7 @@ function createTextBlockData(content: TextProcessingResult, author: string) {
     };
 }
 
-function createHeadingBlock(blockId: string, parentId: string, node: Heading, changeMap: ChangeMap, author: string) {
+function createHeadingBlock(blockId: string, parentId: string, node: Heading, changeMap: ChangeMap, author: any) {
   // Modify node.children directly to remove leading numbers before processing
   node.children.forEach(child => {
     if (child.type === 'text') {
@@ -181,7 +181,7 @@ function createHeadingBlock(blockId: string, parentId: string, node: Heading, ch
   addBlockToChangeMap(block, changeMap, parentId);
 }
 
-function createTodoBlock(blockId: string, parentId: string, node: ListItem, changeMap: ChangeMap, author: string, sourceText: string) {
+function createTodoBlock(blockId: string, parentId: string, node: ListItem, changeMap: ChangeMap, author: any, sourceText: string) {
     const firstChild = node.children[0];
     if (firstChild && firstChild.type === 'paragraph') {
         const content = processPhrasingContent(firstChild.children, author);
@@ -194,7 +194,7 @@ function createTodoBlock(blockId: string, parentId: string, node: ListItem, chan
             children: [],
             comments: [],
             revisions: [],
-            author: author,
+            author: author.author,
             text: textData.text,
             done: node.checked === true,
             folded: false,
@@ -204,7 +204,7 @@ function createTodoBlock(blockId: string, parentId: string, node: ListItem, chan
     }
 }
 
-function createListItemBlock(blockId: string, parentId: string, node: ListItem, changeMap: ChangeMap, author: string, sourceText: string, listInfo: any) {
+function createListItemBlock(blockId: string, parentId: string, node: ListItem, changeMap: ChangeMap, author: any, sourceText: string, listInfo: any) {
     const nestedListChildrenIds: string[] = [];
     const nestedElements = node.children.slice(1);
     if (nestedElements.length > 0) {
@@ -246,7 +246,7 @@ function createListItemBlock(blockId: string, parentId: string, node: ListItem, 
     addBlockToChangeMap(block, changeMap, parentId);
 }
 
-function createTableBlock(blockId: string, parentId: string, node: Table, changeMap: ChangeMap, author: string) {
+function createTableBlock(blockId: string, parentId: string, node: Table, changeMap: ChangeMap, author: any) {
     const rowCount = node.children.length;
     const colCount = node.children[0]?.children.length || 0;
 
@@ -280,7 +280,7 @@ function createTableBlock(blockId: string, parentId: string, node: Table, change
                     children: [],
                     comments: [],
                     revisions: [],
-                    author: author,                  
+                    author: author.author,                  
                     children: [textBlockId],
                 };
                 addBlockToChangeMap(cellBlock, changeMap, blockId, false);
@@ -294,7 +294,7 @@ function createTableBlock(blockId: string, parentId: string, node: Table, change
         parent_id: parentId,
         type: 'table',
         children: cellIds.flat(),
-        author: author,
+        author: author.author,
         columns_id: columnIds,
         rows_id: rowIds,
         column_set: Object.fromEntries(columnIds.map(id => [id, { column_width: 200 }])) as any,
@@ -314,12 +314,12 @@ function createTableBlock(blockId: string, parentId: string, node: Table, change
     changeMap[tblId].payload.ops.push({ p: ['header_column'], action: { oi: true } });
 }
 
-function createCodeBlock(blockId: string, parentId: string, node: Code, changeMap: ChangeMap, author: string) {
+function createCodeBlock(blockId: string, parentId: string, node: Code, changeMap: ChangeMap, author: any) {
   const lines = node.value.split('\n').length - 1;
   const textContent = {
     text: node.value,
     attribs: lines>0?`*0|${lines.toString(36)}+${node.value.length.toString(36)}`:`*0+${node.value.length.toString(36)}`,
-    formatTypes: { '0': ['author', author] },
+    formatTypes: { '0': ['author', author.author] },
   };
 
   const codeBlock = {
@@ -330,7 +330,7 @@ function createCodeBlock(blockId: string, parentId: string, node: Code, changeMa
     wrap: true,
     folded: false,
     is_language_picked: true,
-    author: author,
+    author: author.author,
     children: [],
     comments: [],
     revisions: [],
@@ -364,14 +364,14 @@ function createDividerBlock(blockId: string, parentId: string, changeMap: Change
   addBlockToChangeMap(block, changeMap, parentId);
 }
 
-function createMermaidBlock(blockId: string, parentId: string, node: Code, changeMap: ChangeMap, author: string) {
+function createMermaidBlock(blockId: string, parentId: string, node: Code, changeMap: ChangeMap, author: any) {
     const mermaidBlock = {
         obj_id: blockId,
         type: 'isv',
         children: [],
         comments: [],
         revisions: [],
-        author: author,
+        author: author.author,
         data: {
             data: node.value,
             theme: 'default',
@@ -389,7 +389,7 @@ function createMermaidBlock(blockId: string, parentId: string, node: Code, chang
     addBlockToChangeMap(mermaidBlock, changeMap, parentId);
 }
 
-function createQuoteContainerBlock(blockId: string, parentId: string, node: Blockquote, changeMap: ChangeMap, author: string, sourceText: string) {
+function createQuoteContainerBlock(blockId: string, parentId: string, node: Blockquote, changeMap: ChangeMap, author: any, sourceText: string) {
     const firstChild = node.children[0];
     let isCallout = false;
     if (firstChild && firstChild.type === 'paragraph') {
@@ -405,7 +405,7 @@ function createQuoteContainerBlock(blockId: string, parentId: string, node: Bloc
             parent_id: parentId,
             type: 'callout',
             children: [],
-            author: author,
+            author: author.author,
             comments: [],
             revisions: [],
             emoji_id: 'eggplant',
@@ -455,7 +455,7 @@ function createQuoteContainerBlock(blockId: string, parentId: string, node: Bloc
                 comments: [],
                 revisions: [],
                 folded: false,
-                author: author,
+                author: author.author,
                 text: textData.text,
             };
             
@@ -476,7 +476,7 @@ function createQuoteContainerBlock(blockId: string, parentId: string, node: Bloc
 }
 }
 
-function createEquationBlock(blockId: string, parentId: string, node: Content, changeMap: ChangeMap, author: string) {
+function createEquationBlock(blockId: string, parentId: string, node: Content, changeMap: ChangeMap, author: any) {
     const equationContent = (node as any).value;
     const block = {
         obj_id: blockId,
@@ -485,7 +485,7 @@ function createEquationBlock(blockId: string, parentId: string, node: Content, c
         children: [],
         comments: [],
         revisions: [],
-        author,
+        author: author.author,
         text: {
             initialAttributedTexts: {
                 text: { '0': ' ' },
@@ -493,7 +493,7 @@ function createEquationBlock(blockId: string, parentId: string, node: Content, c
             },
             apool: {
                 numToAttrib: {
-                    '0': ['author', author],
+                    '0': ['author', author.author],
                     '1': ['equation', equationContent],
                     '2': ['objectID', generateObjectId()],
                 },
@@ -506,7 +506,7 @@ function createEquationBlock(blockId: string, parentId: string, node: Content, c
     addBlockToChangeMap(block, changeMap, parentId);
 }
 
-function processParagraph(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: string, sourceText: string, isStandalone: boolean) {
+function processParagraph(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: any, sourceText: string, isStandalone: boolean) {
     const inlineMathIndex = node.children.findIndex(child => 
         child.type === 'inlineMath' && 
         child.position && 
@@ -539,7 +539,7 @@ function processParagraph(blockId: string, parentId: string, node: Paragraph, ch
     }
 }
 
-function createSimpleParagraphBlock(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: string, isStandalone: boolean) {
+function createSimpleParagraphBlock(blockId: string, parentId: string, node: Paragraph, changeMap: ChangeMap, author: any, isStandalone: boolean) {
     const content = processPhrasingContent(node.children, author);
     const textData = createTextBlockData(content, author);
 
@@ -557,7 +557,7 @@ function createSimpleParagraphBlock(blockId: string, parentId: string, node: Par
         obj_id: blockId,
         type: 'text',
         parent_id: parentId,
-        author,
+        author: author.author,
         children: [],
         comments: [],
         revisions: [],
@@ -567,8 +567,8 @@ function createSimpleParagraphBlock(blockId: string, parentId: string, node: Par
     addBlockToChangeMap(block, changeMap, parentId);
 }
 
-function processPhrasingContent(nodes: PhrasingContent[], author: string): TextProcessingResult {
-    const formatTypes: Record<string, [string, string]> = { '0': ['author', author] };
+function processPhrasingContent(nodes: PhrasingContent[], author: any): TextProcessingResult {
+    const formatTypes: Record<string, [string, string]> = { '0': ['author', author.author] };
     let nextNum = 1;
     const formatMap: Record<string, number> = {};
 
@@ -580,14 +580,19 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
     const segments: Segment[] = [];
 
     function getFormatNum(format: string, value: string = 'true'): number {
-        const key = format.includes('-') ? format : `${format}:${value}`;
+        // Determine if format is referring to an existing format number (e.g., 'link-id-2')
+        const isIndexedFormat = /^.+-\d+$/.test(format);
+        const key = isIndexedFormat ? format : `${format}:${value}`;
         if (formatMap[key] === undefined) {
             formatMap[key] = nextNum++;
-            if (format.includes('-')) {
-                const [type, num] = format.split('-');
-                formatTypes[formatMap[key].toString()] = formatTypes[num];
+            const newKey = formatMap[key].toString();
+            if (isIndexedFormat) {
+                // Inherit existing format definition
+                const idx = format.lastIndexOf('-');
+                const numStr = format.substring(idx + 1);
+                formatTypes[newKey] = formatTypes[numStr];
             } else {
-                formatTypes[formatMap[key].toString()] = [format, value];
+                formatTypes[newKey] = [format, value];
             }
         }
         return formatMap[key];
@@ -612,6 +617,33 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
             case 'delete':
                 node.children.forEach(child => processMdastNode(child, [...currentFormats, 'strikethrough']));
                 break;
+            case 'link': {
+                // Build mention_doc inline component for Feishu doc link
+                const title = mdastToString(node);
+                const token = node.url.split('/docx/')[1] || node.url;
+                const mention = {
+                  id: generateUuid(),
+                  type: 'mention_doc',
+                  data: {
+                    file_type: 22,
+                    icon_type: 22,
+                    token,
+                    tenant_id: author.tenantId,
+                    raw_url: node.url,
+                    title,
+                  },
+                };
+                const icNum = getFormatNum('inline-component', JSON.stringify(mention));
+                // Generate link-id attribute
+                const linkId = generateUuid();
+                const lidNum = getFormatNum('link-id', linkId);
+                node.children.forEach(child => processMdastNode(child, [
+                  ...currentFormats,
+                  `inline-component-${icNum}`,
+                  `link-id-${lidNum}`
+                ]));
+                break;
+            }
             case 'inlineCode':
                 segments.push({ text: node.value, formats: [...currentFormats, 'inlineCode'] });
                 break;
@@ -658,8 +690,10 @@ function processPhrasingContent(nodes: PhrasingContent[], author: string): TextP
     attribs = mergedSegments.map(seg => {
         const formatStr = seg.formats.map(f => {
             if (f.includes('-')) {
-                const [_type, num] = f.split('-');
-                return `*${(num * 1).toString(36)}`;
+                const idx = f.lastIndexOf('-');
+                const numStr = f.substring(idx + 1);
+                const num = parseInt(numStr, 10);
+                return `*${num.toString(36)}`;
             }
             return `*${getFormatNum(f).toString(36)}`;
         }).join('');
