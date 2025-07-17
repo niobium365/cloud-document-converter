@@ -618,30 +618,43 @@ function processPhrasingContent(nodes: PhrasingContent[], author: any): TextProc
                 node.children.forEach(child => processMdastNode(child, [...currentFormats, 'strikethrough']));
                 break;
             case 'link': {
-                // Build mention_doc inline component for Feishu doc link
-                const title = mdastToString(node);
-                const token = node.url.split('/docx/')[1] || node.url;
-                const mention = {
+                if (node.url.startsWith('user://')) {
+                    // User mention syntax
+                    const uid = node.url.slice('user://'.length);
+                    const mention = {
+                        id: generateUuid(),
+                        type: 'user',
+                        data: { uid, mention_id: generateUuid() },
+                    };
+                    const icNum = getFormatNum('inline-component', JSON.stringify(mention));
+                    // Use single space placeholder for mention
+                    segments.push({ text: ' ', formats: [...currentFormats, `inline-component-${icNum}`] });
+                } else {
+                    // Build mention_doc inline component for Feishu doc link
+                    const title = mdastToString(node);
+                    const token = node.url.split('/docx/')[1] || node.url;
+                    const mention = {
                   id: generateUuid(),
-                  type: 'mention_doc',
-                  data: {
-                    file_type: 22,
-                    icon_type: 22,
-                    token,
+                      type: 'mention_doc',
+                      data: {
+                        file_type: 22,
+                        icon_type: 22,
+                        token,
                     tenant_id: author.tenantId,
-                    raw_url: node.url,
-                    title,
-                  },
-                };
-                const icNum = getFormatNum('inline-component', JSON.stringify(mention));
-                // Generate link-id attribute
+                        raw_url: node.url,
+                        title,
+                      },
+                    };
+                    const icNum = getFormatNum('inline-component', JSON.stringify(mention));
+                    // Generate link-id attribute
                 const linkId = generateUuid();
-                const lidNum = getFormatNum('link-id', linkId);
-                node.children.forEach(child => processMdastNode(child, [
-                  ...currentFormats,
-                  `inline-component-${icNum}`,
-                  `link-id-${lidNum}`
-                ]));
+                    const lidNum = getFormatNum('link-id', linkId);
+                    node.children.forEach(child => processMdastNode(child, [
+                      ...currentFormats,
+                      `inline-component-${icNum}`,
+                      `link-id-${lidNum}`
+                    ]));
+                }
                 break;
             }
             case 'inlineCode':
