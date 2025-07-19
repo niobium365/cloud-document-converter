@@ -583,7 +583,7 @@ export const transformOperationsToPhrasingContents = (
                 ...op.attributes,
                 link: inlineComponent.data.raw_url,
               },
-              insert: /*op.insert*/ + inlineComponent.data.title,
+              insert: /*op.insert + */inlineComponent.data.title,
             } as Operation
           }
           if (inlineComponent.type === 'user') {
