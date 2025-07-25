@@ -1460,7 +1460,7 @@ export class Docx {
           singleDollarTextMath: true,
         }),
       ],
-    }).replace(/\\_/g, '_');
+    }).replace(/\\_/g, '_').replace(/\\\*/g, '*');
   }
 
   get rootBlock(): PageBlock | null {
