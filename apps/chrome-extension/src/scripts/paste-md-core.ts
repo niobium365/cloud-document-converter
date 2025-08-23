@@ -460,6 +460,16 @@ function createQuoteContainerBlock(blockId: string, parentId: string, node: Bloc
             };
             
             addBlockToChangeMap(textBlock, changeMap, blockId, false);
+        } else if (childNode.type === 'list') {
+            const childBlockId = generateId();
+            childrenIds.push(childBlockId);
+            
+            // Process list items directly within the quote container
+            childNode.children.forEach((item, index) => {
+                const seq = (childNode.ordered && index === 0) ? '1' : 'auto';
+                item.temp_id = childBlockId;
+                processNode(item, blockId, changeMap, author, sourceText, { type: childNode.ordered ? 'ordered' : 'bullet', level: 1, seq });
+            });
         } else {
             // In a real-world scenario, you might want to handle other block types within a quote.
             console.warn(`Unsupported node type inside blockquote: ${childNode.type}`);
