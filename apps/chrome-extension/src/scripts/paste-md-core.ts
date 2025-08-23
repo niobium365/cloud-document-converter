@@ -461,13 +461,12 @@ function createQuoteContainerBlock(blockId: string, parentId: string, node: Bloc
             
             addBlockToChangeMap(textBlock, changeMap, blockId, false);
         } else if (childNode.type === 'list') {
-            const childBlockId = generateId();
-            childrenIds.push(childBlockId);
-            
             // Process list items directly within the quote container
             childNode.children.forEach((item, index) => {
+                const itemBlockId = generateId();
+                childrenIds.push(itemBlockId);
                 const seq = (childNode.ordered && index === 0) ? '1' : 'auto';
-                item.temp_id = childBlockId;
+                item.temp_id = itemBlockId;
                 processNode(item, blockId, changeMap, author, sourceText, { type: childNode.ordered ? 'ordered' : 'bullet', level: 1, seq });
             });
         } else {

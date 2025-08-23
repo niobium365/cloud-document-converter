@@ -30,8 +30,11 @@ const main = async () => {
     // Get current document info
     const docIdMatch = window.location.pathname.match(/\/docx\/([^/]+)/)
     if (!docIdMatch) {
-      Toast.error({ content: 'Cannot insert text: Not in a Lark document.' })
-      return
+        const docIdMatch = window.location.pathname.match(/\/wiki\/([^/]+)/)
+        if (!docIdMatch) {
+          Toast.error({ content: 'Cannot insert text: Not in a Lark document.' })
+          return
+        }
     }
     const docToken = docIdMatch[1]
 
