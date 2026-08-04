@@ -246,12 +246,47 @@ function createListItemBlock(blockId: string, parentId: string, node: ListItem, 
     addBlockToChangeMap(block, changeMap, parentId);
 }
 
+const MIN_TABLE_COLUMN_WIDTH = 120;
+const MAX_TABLE_COLUMN_WIDTH = 480;
+const TABLE_COLUMN_PADDING = 40;
+const TABLE_CHARACTER_WIDTH = 12;
+
+function displayWidth(value: string): number {
+    return Math.max(
+        1,
+        ...value.split('\n').map(line =>
+            Array.from(line).reduce(
+                (width, character) => width + (character.codePointAt(0)! > 0xff ? 2 : 1),
+                0,
+            ),
+        ),
+    );
+}
+
+function calculateTableColumnWidths(node: Table, colCount: number): number[] {
+    return Array.from({ length: colCount }, (_, columnIndex) => {
+        const widestCell = Math.max(
+            1,
+            ...node.children.map(row => {
+                const cell = row.children[columnIndex];
+                return cell ? displayWidth(mdastToString(cell)) : 0;
+            }),
+        );
+        const preferredWidth = TABLE_COLUMN_PADDING + widestCell * TABLE_CHARACTER_WIDTH;
+        return Math.min(
+            MAX_TABLE_COLUMN_WIDTH,
+            Math.max(MIN_TABLE_COLUMN_WIDTH, preferredWidth),
+        );
+    });
+}
+
 function createTableBlock(blockId: string, parentId: string, node: Table, changeMap: ChangeMap, author: any) {
     const rowCount = node.children.length;
     const colCount = node.children[0]?.children.length || 0;
 
     const rowIds = Array.from({ length: rowCount }, () => 'row' + generateUuid());
     const columnIds = Array.from({ length: colCount }, () => 'col' + generateUuid());
+    const columnWidths = calculateTableColumnWidths(node, colCount);
     const cellIds: string[][] = [];
 
     for (let i = 0; i < rowCount; i++) {
@@ -297,7 +332,9 @@ function createTableBlock(blockId: string, parentId: string, node: Table, change
         author: author.author,
         columns_id: columnIds,
         rows_id: rowIds,
-        column_set: Object.fromEntries(columnIds.map(id => [id, { column_width: 200 }])) as any,
+        column_set: Object.fromEntries(
+            columnIds.map((id, index) => [id, { column_width: columnWidths[index] }]),
+        ) as any,
         cell_set: Object.fromEntries(
             cellIds.flatMap((row, r) =>
                 row.map((cId, c) => {
@@ -576,6 +613,11 @@ function createSimpleParagraphBlock(blockId: string, parentId: string, node: Par
     addBlockToChangeMap(block, changeMap, parentId);
 }
 
+function extractFeishuDocumentToken(url: string): string {
+    const match = url.match(/\/(?:docx|wiki)\/([^/?#]+)/);
+    return match?.[1] || url;
+}
+
 function processPhrasingContent(nodes: PhrasingContent[], author: any): TextProcessingResult {
     const formatTypes: Record<string, [string, string]> = { '0': ['author', author.author] };
     let nextNum = 1;
@@ -641,7 +683,7 @@ function processPhrasingContent(nodes: PhrasingContent[], author: any): TextProc
                 } else {
                     // Build mention_doc inline component for Feishu doc link
                     const title = mdastToString(node);
-                    const token = node.url.split('/docx/')[1] || node.url;
+                    const token = extractFeishuDocumentToken(node.url);
                     const mention = {
                   id: generateUuid(),
                       type: 'mention_doc',

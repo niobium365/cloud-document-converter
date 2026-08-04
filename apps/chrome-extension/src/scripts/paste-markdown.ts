@@ -15,7 +15,9 @@ const main = async () => {
       console.error('Member ID not found in localStorage')
       return
     }
-    const csrf = window.localStorage.getItem('cdc_csrf_token') || ''
+    const csrfFromInjection = document.documentElement.dataset['cdcCsrfToken']
+    delete document.documentElement.dataset['cdcCsrfToken']
+    const csrf = csrfFromInjection || window.localStorage.getItem('cdc_csrf_token') || ''
 
     const PageMain: any = (window as any).PageMain
     if (!PageMain) {
@@ -28,13 +30,10 @@ const main = async () => {
       return
     }
     // Get current document info
-    const docIdMatch = window.location.pathname.match(/\/docx\/([^/]+)/)
+    const docIdMatch = window.location.pathname.match(/\/(?:docx|wiki)\/([^/]+)/)
     if (!docIdMatch) {
-        const docIdMatch = window.location.pathname.match(/\/wiki\/([^/]+)/)
-        if (!docIdMatch) {
-          Toast.error({ content: 'Cannot insert text: Not in a Lark document.' })
-          return
-        }
+      Toast.error({ content: 'Cannot insert text: Not in a Lark document.' })
+      return
     }
     const docToken = docIdMatch[1]
 
@@ -229,15 +228,9 @@ const insertParagraph = async (
       // Get the direct child block ID at cursor position
       const directChildId = getDirectChildBlockIdFromCursor();
       
-      // If we couldn't find a direct child block ID, fall back to pasting at the page level
-      if (!directChildId) {
-        console.warn('No direct child block ID found, pasting at page level');
-        return false;
-      }
-      
-      // Position to insert blocks
-      // If directChildId is provided, use its position in the children array
-      let insertPosition = 0;
+      // A new/empty document has no selectable direct child block. Append to the
+      // page in that case instead of failing before the user_change request.
+      let insertPosition = existingChildren.length;
       
       // If directChildId is available from the parent context, use its position
       if (typeof directChildId !== 'undefined' && directChildId) {
@@ -264,10 +257,13 @@ const insertParagraph = async (
       // Create the final change map that includes deletion of existing blocks
       const changeMap = { ...contentChangeMap };
 
-      // Filter existingChildren to keep only those at or after insertPosition
-      if (insertPosition > 0) {
+      // When a cursor block was found, retain the existing replace-from-cursor
+      // behavior. The empty-document fallback appends and must not delete blocks.
+      if (directChildId && insertPosition > 0) {
         existingChildren = existingChildren.slice(insertPosition);
         console.log(`Removed ${insertPosition} blocks before insertion point, ${existingChildren.length} remaining`);
+      } else if (!directChildId) {
+        existingChildren = [];
       }
       
       // Add deletion operations for children
@@ -303,4 +299,3 @@ const insertParagraph = async (
 
 // Execute the main function
 main().catch(console.error)
-

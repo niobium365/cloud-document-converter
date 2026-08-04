@@ -4,6 +4,21 @@ const HELP_BLOCK_CLASS = '.help-block'
 console.log('[CDC] content script loaded');
 let disposables: (() => void)[] = []
 
+const csrfToken = document.cookie
+  .split('; ')
+  .find(cookie =>
+    cookie.startsWith('_csrf_token=') || cookie.startsWith('swp_csrf_token='),
+  )
+  ?.split('=')
+  .slice(1)
+  .join('')
+
+if (csrfToken) {
+  chrome.runtime
+    .sendMessage({ flag: 'cache_csrf_token', csrfToken })
+    .catch(console.error)
+}
+
 // Mirror any cdc_page_version_* keys from chrome.storage into window.localStorage
 console.log('[CDC] storage.onChanged listener registered');
 chrome.storage.onChanged.addListener((changes, area) => {

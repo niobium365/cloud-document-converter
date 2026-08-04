@@ -161,6 +161,69 @@ chrome.runtime.onInstalled.addListener(() => {
   })
 })
 
+const csrfTokenForTab = async (tabId: number): Promise<string | undefined> => {
+  const tab = await chrome.tabs.get(tabId)
+  if (!tab.url) return undefined
+
+  const cookies = await chrome.cookies.getAll({ url: tab.url })
+  return cookies.find(cookie =>
+    cookie.name === '_csrf_token' || cookie.name === 'swp_csrf_token',
+  )?.value
+}
+
+const pasteMarkdownInTab = async (tabId: number, markdownText?: string) => {
+  const { earlyMemberId, csrfToken } = await chrome.storage.local.get([
+    'earlyMemberId',
+    'csrfToken',
+  ])
+  const csrfFromCookie = await csrfTokenForTab(tabId)
+  if (csrfFromCookie) {
+    await chrome.storage.local.set({ csrfToken: csrfFromCookie })
+  }
+  const csrf = csrfFromCookie ?? (csrfToken ? String(csrfToken) : undefined)
+
+  // chrome-types 0.1.321 does not yet declare ScriptInjection.args.
+  const pageStorageInjection = {
+    func: (
+      content: string | null,
+      memberId: string | null,
+      csrf: string | null,
+    ) => {
+      try {
+        const csrfFromCookie = document.cookie
+          .split('; ')
+          .find(cookie =>
+            cookie.startsWith('_csrf_token=') || cookie.startsWith('swp_csrf_token='),
+          )
+          ?.split('=')
+          .slice(1)
+          .join('')
+        if (content) window.localStorage.setItem('cdc_markdown_content', content)
+        if (memberId) window.localStorage.setItem('cdc_early_member_id', memberId)
+        const csrfValue = csrf || csrfFromCookie
+        if (csrfValue) {
+          document.documentElement.dataset['cdcCsrfToken'] = csrfValue
+          window.localStorage.setItem('cdc_csrf_token', csrfValue)
+        }
+      } catch {}
+    },
+    args: [
+      markdownText ?? null,
+      earlyMemberId ? String(earlyMemberId) : null,
+      csrf ?? null,
+    ],
+    target: { tabId },
+    world: 'MAIN',
+  }
+  await chrome.scripting.executeScript(pageStorageInjection as any)
+
+  await chrome.scripting.executeScript({
+    files: ['bundles/scripts/paste-markdown.js'],
+    target: { tabId },
+    world: 'MAIN',
+  })
+}
+
 const executeScriptByFlag = async (flag: string | number, tabId: number) => {
   switch (flag) {
     case MenuItemId.DOWNLOAD_DOCX_AS_MARKDOWN:
@@ -202,44 +265,7 @@ const executeScriptByFlag = async (flag: string | number, tabId: number) => {
       })
       break
     case MenuItemId.PASTE_MARKDOWN:
-      // Extract markdown text if provided in message
-      let markdownText: string | undefined;
-      if (typeof flag === 'object' && flag && 'markdownText' in flag) {
-        markdownText = (flag as any).markdownText;
-      }
-      
-      // First, set the markdown content in a separate script injection
-      if (markdownText) {
-        await chrome.scripting.executeScript({
-          func: () => {
-            const content = `${markdownText}`;
-            try { window.localStorage.setItem('cdc_markdown_content', content); } catch {}
-          },
-          target: { tabId },
-        });
-      }
-      
-      // Now inject the auth tokens as before
-      await chrome.scripting.executeScript({
-        func: () => {
-          chrome.storage.local.get(['earlyMemberId','csrfToken'], (res: any) => {
-            const mid = res.earlyMemberId;
-            if (mid) {
-              try { window.localStorage.setItem('cdc_early_member_id', String(mid)); } catch {}
-            }
-            const csrf = res.csrfToken;
-            if (csrf) {
-              try { window.localStorage.setItem('cdc_csrf_token', String(csrf)); } catch {}
-            }
-          });
-        },
-        target: { tabId },
-      })
-      await chrome.scripting.executeScript({
-        files: ['bundles/scripts/paste-markdown.js'],
-        target: { tabId },
-        world: 'MAIN',
-      })
+      await pasteMarkdownInTab(tabId)
       break
     default:
       break
@@ -253,9 +279,18 @@ chrome.contextMenus.onClicked.addListener(({ menuItemId }, tab) => {
 })
 
 chrome.runtime.onMessage.addListener((_message, sender, sendResponse) => {
-  const msg = _message as { flag: string; markdownText?: string }
+  const msg = _message as {
+    flag: string
+    markdownText?: string
+    csrfToken?: string
+  }
 
   const handleMessage = async () => {
+    if (msg.flag === 'cache_csrf_token' && msg.csrfToken) {
+      await chrome.storage.local.set({ csrfToken: msg.csrfToken })
+      return
+    }
+
     let tabId = (msg as any).tabId as number | undefined;
     if (!tabId) {
       const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -264,30 +299,7 @@ chrome.runtime.onMessage.addListener((_message, sender, sendResponse) => {
     if (!tabId) return;
 
     if (msg.flag === MenuItemId.PASTE_MARKDOWN) {
-      // Inject markdown content into page localStorage
-      if (msg.markdownText) {
-        // @ts-ignore chrome.scripting.executeScript args are supported at runtime
-        await chrome.scripting.executeScript({
-          // @ts-ignore chrome.scripting.executeScript func signature mismatch
-          func: (content: string) => {
-            try { window.localStorage.setItem('cdc_markdown_content', content) } catch {}
-          },
-          args: [msg.markdownText],
-          target: { tabId },
-        })
-      }
-      // Inject auth tokens
-      await chrome.scripting.executeScript({
-        func: () => {
-          chrome.storage.local.get(['earlyMemberId','csrfToken'], (res: any) => {
-            if (res.earlyMemberId) try { window.localStorage.setItem('cdc_early_member_id', String(res.earlyMemberId)) } catch {}
-            if (res.csrfToken) try { window.localStorage.setItem('cdc_csrf_token', String(res.csrfToken)) } catch {}
-          })
-        },
-        target: { tabId },
-      })
-      // Execute content script
-      await chrome.scripting.executeScript({ files: ['bundles/scripts/paste-markdown.js'], target: { tabId }, world: 'MAIN' })
+      await pasteMarkdownInTab(tabId, msg.markdownText)
     } else {
       // Handle other flags via context menu logic
       await executeScriptByFlag(msg.flag, tabId)

@@ -4,3 +4,8 @@ bundles
 dist-firefox
 
 web-ext-artifacts
+
+# Local Feishu E2E login profile and configuration
+.e2e/
+playwright-report/
+test-results/
